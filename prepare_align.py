@@ -1,7 +1,7 @@
 import argparse
 
 from utils.tools import get_configs_of
-from preprocessor import ljspeech, vctk
+from preprocessor import ljspeech, vctk, aishell3, libritts
 
 
 def main(config):
@@ -9,6 +9,10 @@ def main(config):
         ljspeech.prepare_align(config)
     if "VCTK" in config["dataset"]:
         vctk.prepare_align(config)
+    if "AISHELL3" in config["dataset"]:
+        aishell3.prepare_align(config)
+    if "LibriTTS" in config["dataset"]:
+        libritts.prepare_align(config)
 
 
 if __name__ == "__main__":

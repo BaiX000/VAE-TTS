@@ -137,6 +137,7 @@ if __name__ == "__main__":
         "--speaker_id",
         type=str,
         default="p225",
+        nargs='+', 
         help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
     )
     parser.add_argument(
@@ -209,12 +210,22 @@ if __name__ == "__main__":
             and preprocess_config["preprocessing"]["speaker_embedder"] != 'none'
         with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "speakers.json")) as f:
             speaker_map = json.load(f)
+            
+        # modify speakers 
+        spker_embeds = []
+        if load_spker_embed:
+            for sid in args.speaker_id:
+                spker_embeds.append(np.load(os.path.join(preprocess_config["path"]["preprocessed_path"],"spker_embed","{}-spker_embed.npy".format(sid))))
+           
+        if len(spker_embeds) == 1:
+            spker_embed = spker_embeds[0]
+        else:
+            spker_embed = (spker_embeds[0]*0.4+spker_embeds[1]*0.6)
+            
+        args.speaker_id = args.speaker_id[0]
+        
         speakers = np.array([speaker_map[args.speaker_id]]) if model_config["multi_speaker"] else np.array([0]) # single speaker is allocated 0
-        spker_embed = np.load(os.path.join(
-            preprocess_config["path"]["preprocessed_path"],
-            "spker_embed",
-            "{}-spker_embed.npy".format(args.speaker_id),
-        )) if load_spker_embed else None
+        
 
         if preprocess_config["preprocessing"]["text"]["language"] == "en":
             texts = np.array([preprocess_english(args.text, preprocess_config)])

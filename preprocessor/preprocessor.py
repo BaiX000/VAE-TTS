@@ -32,7 +32,7 @@ class Preprocessor:
         self.sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
         self.hop_length = preprocess_config["preprocessing"]["stft"]["hop_length"]
         self.beta_binomial_scaling_factor = preprocess_config["preprocessing"]["duration"]["beta_binomial_scaling_factor"]
-
+        self.target_speakers = preprocess_config["preprocessing"]["target_speakers"] if "target_speakers" in preprocess_config["preprocessing"].keys() else None
         assert preprocess_config["preprocessing"]["pitch"]["feature"] in [
             "phoneme_level",
             "frame_level",
@@ -56,7 +56,13 @@ class Preprocessor:
         )
         self.val_prior = self.val_prior_names(os.path.join(self.out_dir, "val.txt"))
         self.speaker_emb = None
-        self.in_sub_dirs = [p for p in os.listdir(self.in_dir) if os.path.isdir(os.path.join(self.in_dir, p))]
+        
+        
+        if self.target_speakers:
+            self.in_sub_dirs = [p for p in os.listdir(self.in_dir) if os.path.isdir(os.path.join(self.in_dir, p)) and p in self.target_speakers]
+        else:
+            self.in_sub_dirs = [p for p in os.listdir(self.in_dir) if os.path.isdir(os.path.join(self.in_dir, p))]
+            
         if self.multi_speaker and preprocess_config["preprocessing"]["speaker_embedder"] != "none":
             self.speaker_emb = PreDefinedEmbedder(preprocess_config)
             self.speaker_emb_dict = self._init_spker_embeds(self.in_sub_dirs)
@@ -212,13 +218,15 @@ class Preprocessor:
                 n_frames * self.hop_length / self.sampling_rate / 3600
             )
         )
-
+        # skip plot
+        '''
         if self.speaker_emb is not None:
             print("Plot speaker embedding...")
             plot_embedding(
                 self.out_dir, *self.load_embedding(embedding_dir),
                 self.divide_speaker_by_gender(self.corpus_dir), filename="spker_embed_tsne.png"
             )
+        '''
 
         if self.val_prior is not None:
             assert len(out) == 0
