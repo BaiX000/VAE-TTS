@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from .modules import PostNet, VarianceAdaptor
 from utils.tools import get_mask_from_lengths
-
+from model.vae import VAE
 
 class CompTransTTS(nn.Module):
     """ CompTransTTS """
@@ -58,6 +58,10 @@ class CompTransTTS(nn.Module):
                     model_config["external_speaker_dim"],
                     model_config["transformer"]["encoder_hidden"],
                 )
+        # add vae model
+        self.vae = VAE()
+        self.external_speaker_embed = model_config["external_speaker_embed"] if "external_speaker_embed" in model_config.keys() else None
+    
 
     def forward(
         self,
@@ -87,13 +91,21 @@ class CompTransTTS(nn.Module):
 
         texts, text_embeds = self.encoder(texts, src_masks)
 
+
         speaker_embeds = None
         if self.speaker_emb is not None:
             if self.embedder_type == "none":
                 speaker_embeds = self.speaker_emb(speakers) # [B, H]
             else:
                 assert spker_embeds is not None, "Speaker embedding should not be None"
-                speaker_embeds = self.speaker_emb(spker_embeds) # [B, H]
+                # vae process 
+                if self.external_speaker_embed:
+                    speaker_embeds = self.speaker_emb(spker_embeds)
+                else:
+                    recons_spker_embeds, org_input, mu, log_var = self.vae(spker_embeds)
+                    speaker_embeds = self.speaker_emb(recons_spker_embeds) # [B, H]
+        
+        
 
         (
             output,
@@ -143,6 +155,12 @@ class CompTransTTS(nn.Module):
             src_lens,
             mel_lens,
             attn_outs,
+            # add
+            recons_spker_embeds,
+            org_input,
+            mu,
+            log_var,
+            # --- 
             p_targets,
-            e_targets,
+            e_targets,            
         )

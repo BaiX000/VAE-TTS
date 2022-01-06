@@ -1,0 +1,3 @@
+python3 train.py --dataset AISHELL3
+
+python3 synthesize.py --text "不可以色色" --speaker_ids SSB1024 SSB1782 --restore_step 25000 --mode single --dataset AISHELL3

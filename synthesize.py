@@ -136,9 +136,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--speaker_id",
         type=str,
-        default="p225",
-        nargs='+', 
         help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
+    )
+    parser.add_argument(
+        "--speaker_ids",
+        type=str,
+        nargs='+', 
+        help="speaker IDs for multi-speaker synthesis, for single-sentence mode only",
     )
     parser.add_argument(
         "--dataset",
@@ -211,21 +215,37 @@ if __name__ == "__main__":
         with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "speakers.json")) as f:
             speaker_map = json.load(f)
             
-        # modify speakers 
-        spker_embeds = []
-        if load_spker_embed:
-            for sid in args.speaker_id:
-                spker_embeds.append(np.load(os.path.join(preprocess_config["path"]["preprocessed_path"],"spker_embed","{}-spker_embed.npy".format(sid))))
-           
-        if len(spker_embeds) == 1:
-            spker_embed = spker_embeds[0]
-        else:
-            spker_embed = (spker_embeds[0]*0.4+spker_embeds[1]*0.6)
+        # get speaker embed
+        print(args.speaker_id,args.speaker_ids )
+        assert args.speaker_id or args.speaker_ids        
+        if args.speaker_id:
+            speakers = np.array([speaker_map[args.speaker_id]]) if model_config["multi_speaker"] else np.array([0]) # single speaker is allocated 0
+            spker_embed = np.load(os.path.join(
+                preprocess_config["path"]["preprocessed_path"],
+                "spker_embed",
+                "{}-spker_embed.npy".format(args.speaker_id),
+            )) if load_spker_embed else None
+        elif args.speaker_ids:
+            assert len(args.speaker_ids) == 2
+            model_config["external_speaker_embed"] = True
+            speakers = np.array([0]) # ??
+            spker_A_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids[0]))) 
+            spker_B_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids[1]))) 
+            spker_A_embed = torch.from_numpy(spker_A_embed).float().to(device)
+            spker_B_embed = torch.from_numpy(spker_B_embed).float().to(device)
             
-        args.speaker_id = args.speaker_id[0]
-        
-        speakers = np.array([speaker_map[args.speaker_id]]) if model_config["multi_speaker"] else np.array([0]) # single speaker is allocated 0
-        
+            mu_A, log_var_A = model.vae.encode(spker_A_embed)
+            z_A = model.vae.reparameterize(mu_A, log_var_A)
+            mu_B, log_var_B = model.vae.encode(spker_B_embed)
+            z_B = model.vae.reparameterize(mu_B, log_var_B)
+            
+            mu, log_var= (mu_A + mu_B)/2, (exp(2*log_var_A)+exp(2*log_var_B))**0.5
+            z = model.vae.reparameterize(mu, log_var)
+            #z_mean = z_A*0.9 + z_B*0.1
+            spker_embed = model.vae.decode(z)
+            spker_embed = spker_embed.cpu().detach().numpy()
+            
+
 
         if preprocess_config["preprocessing"]["text"]["language"] == "en":
             texts = np.array([preprocess_english(args.text, preprocess_config)])

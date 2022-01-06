@@ -8,7 +8,7 @@ path:
   log_path: "./output/log/AISHELL3"
   result_path: "./output/result/AISHELL3"
 optimizer:
-  batch_size: 16
+  batch_size: 12 #16
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
@@ -21,7 +21,7 @@ step:
   total_step: 900000
   log_step: 100
   synth_step: 1000
-  val_step: 1000
+  val_step: 1000 # 1000
   save_step: 25000
 duration:
   binarization_start_steps: 6000
