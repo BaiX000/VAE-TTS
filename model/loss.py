@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from . import vae
 
 
 class CompTransTTSLoss(nn.Module):
@@ -17,10 +18,24 @@ class CompTransTTSLoss(nn.Module):
         self.learn_alignment = model_config["duration_modeling"]["learn_alignment"]
         self.binarization_loss_enable_steps = train_config["duration"]["binarization_loss_enable_steps"]
         self.binarization_loss_warmup_steps = train_config["duration"]["binarization_loss_warmup_steps"]
+        
+        self.vae_start_steps = train_config["vae"]["vae_start_steps"]
+        self.kld_loss_enable_steps = train_config["vae"]["kld_loss_enable_steps"]
+        self.kld_loss_warmup_steps = train_config["vae"]["kld_loss_warmup_steps"]
+        self.kld_final_weight = train_config["vae"]["kld_final_weight"]
+        
         self.sum_loss = ForwardSumLoss()
         self.bin_loss = BinLoss()
         self.mse_loss = nn.MSELoss()
         self.mae_loss = nn.L1Loss()
+        
+        # check vae type
+        self.vae_type = model_config["vae_type"]
+        assert self.vae_type in ['VAE', 'VSC']
+        if self.vae_type == "VAE":
+            self.vae_loss = vae.VAE().loss_function
+        elif self.vae_type == "VSC":
+            self.vae_loss = vae.VSC().loss_function 
 
     def forward(self, inputs, predictions, step):
         (
@@ -46,10 +61,8 @@ class CompTransTTSLoss(nn.Module):
             mel_lens,
             attn_outs,
             # vae results
-            recons,
-            org_input,
-            mu,
-            log_var
+            vae_results,
+            
         ) = predictions
         src_masks = ~src_masks
         mel_masks = ~mel_masks
@@ -105,15 +118,35 @@ class CompTransTTSLoss(nn.Module):
                 bin_loss_weight = min((step-self.binarization_loss_enable_steps) / self.binarization_loss_warmup_steps, 1.0) * 1.0
             bin_loss = self.bin_loss(hard_attention=attn_hard, soft_attention=attn_soft) * bin_loss_weight
 
-        # vae loss
-        kld_weight = 0.00025
-        recons_loss = self.mse_loss(recons, org_input)
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
-        vae_loss = recons_loss + kld_weight * kld_loss    
+        # VAE LOSS
+        if vae_results is not None:
+            if self.vae_type == "VAE":             
+                recons, org_input, mu, log_var = vae_results
+                recons_loss, kld_loss = self.vae_loss(recons, org_input, mu, log_var)          
+
+            if self.vae_type == "VSC":
+                recons, org_input, mu, log_var, log_spike = vae_results
+                recons_loss, kld_loss = self.vae_loss(recons, org_input, mu, log_var, log_spike)
         
-        total_loss = (
-            mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss + ctc_loss + bin_loss + vae_loss
-        )
+            if step < self.vae_start_steps:
+                kld_loss = kld_loss * 0.
+                recons_loss = recons_loss * 0 
+                vae_loss = recons_loss # equal zero
+            elif step < self.kld_loss_enable_steps:
+                kld_loss = kld_loss * 0.
+                vae_loss = recons_loss
+            else:
+                kld_weight = min((step-self.kld_loss_enable_steps) / self.kld_loss_warmup_steps, 1.0) * self.kld_final_weight
+                vae_loss = recons_loss + kld_weight * kld_loss
+        # --- end ----
+            total_loss = (
+                mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss + ctc_loss + bin_loss + vae_loss
+            )
+        else:
+            total_loss = (
+                mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss + ctc_loss + bin_loss
+            )
+            vae_loss = recons_loss = kld_loss = torch.zeros(1)
 
         return (
             total_loss,
@@ -124,7 +157,9 @@ class CompTransTTSLoss(nn.Module):
             duration_loss,
             ctc_loss,
             bin_loss,
-            vae_loss
+            vae_loss,
+            recons_loss,
+            kld_loss
         )
 
 

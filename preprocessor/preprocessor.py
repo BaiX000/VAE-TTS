@@ -66,6 +66,7 @@ class Preprocessor:
         if self.multi_speaker and preprocess_config["preprocessing"]["speaker_embedder"] != "none":
             self.speaker_emb = PreDefinedEmbedder(preprocess_config)
             self.speaker_emb_dict = self._init_spker_embeds(self.in_sub_dirs)
+        self.skip_mel_len = preprocess_config["preprocessing"]["skip_mel_len"] if "skip_mel_len" in preprocess_config["preprocessing"].keys() else 0
 
     def _init_spker_embeds(self, spkers):
         spker_embeds = dict()
@@ -137,12 +138,21 @@ class Preprocessor:
         for embedding_name in os.listdir(embedding_dir):
             skip_speakers.add(embedding_name.split("-")[0])
 
+        # to record process info, such as how many uttr are skip.
+        process_info = {}
+        for speaker in self.in_sub_dirs:
+            if os.path.isdir(os.path.join(self.in_dir, speaker)):
+                process_info[speaker] = {}
+                process_info[speaker]["total_uttr"] = 0
+                process_info[speaker]["remain_uttr"] = 0      
+        print(f"skip_mel_len: {self.skip_mel_len}")
         # Compute pitch, energy, duration, and mel-spectrogram
-        speakers = {}
+        speakers = {}      
         for i, speaker in enumerate(tqdm(self.in_sub_dirs)):
             save_speaker_emb = self.speaker_emb is not None and speaker not in skip_speakers
             if os.path.isdir(os.path.join(self.in_dir, speaker)):
                 speakers[speaker] = i
+        
                 for wav_name in tqdm(os.listdir(os.path.join(self.in_dir, speaker))):
                     if ".wav" not in wav_name:
                         continue
@@ -151,12 +161,14 @@ class Preprocessor:
                     tg_path = os.path.join(
                         self.out_dir, "TextGrid", speaker, "{}.TextGrid".format(basename)
                     )
+                    process_info[speaker]["total_uttr"] += 1
                     if os.path.exists(tg_path):
                         ret = self.process_utterance(tg_path, speaker, basename, save_speaker_emb)
                         if ret is None:
                             continue
                         else:
-                            info, pitch_frame, pitch_phone, energy_frame, energy_phone, n, spker_embed = ret
+                            info, pitch_frame, pitch_phone, energy_frame, energy_phone, n, spker_embed = ret                        
+                            process_info[speaker]["remain_uttr"] += 1
 
                         if self.val_prior is not None:
                             if basename not in self.val_prior:
@@ -165,18 +177,22 @@ class Preprocessor:
                                 val.append(info)
                         else:
                             out.append(info)
-                    if save_speaker_emb:
-                        self.speaker_emb_dict[speaker].append(spker_embed)
+                            
+                        if save_speaker_emb:
+                            self.speaker_emb_dict[speaker].append(spker_embed)
 
-                    partial_fit(pitch_frame_scaler, pitch_frame)
-                    partial_fit(pitch_phone_scaler, pitch_phone)
-                    partial_fit(energy_frame_scaler, energy_frame)
-                    partial_fit(energy_phone_scaler, energy_phone)
+                        partial_fit(pitch_frame_scaler, pitch_frame)
+                        partial_fit(pitch_phone_scaler, pitch_phone)
+                        partial_fit(energy_frame_scaler, energy_frame)
+                        partial_fit(energy_phone_scaler, energy_phone)
 
-                    if n > max_seq_len:
-                        max_seq_len = n
+                        if n > max_seq_len:
+                            max_seq_len = n
 
-                    n_frames += n
+                        n_frames += n
+                        
+                print(f"max_seq_len: {max_seq_len}")
+                print(f"speaker:{speaker}, uttrs:{process_info[speaker]['remain_uttr']}/{process_info[speaker]['total_uttr']}.")
 
                 # Calculate and save mean speaker embedding of this speaker
                 if save_speaker_emb:
@@ -200,6 +216,9 @@ class Preprocessor:
         )
 
         # Save files
+        with open(os.path.join(self.out_dir, "process_info.json"), "w") as f:
+            f.write(json.dumps(process_info))
+        
         with open(os.path.join(self.out_dir, "speakers.json"), "w") as f:
             f.write(json.dumps(speakers))
 
@@ -305,6 +324,10 @@ class Preprocessor:
         # Phone-level variance
         pitch_phone, energy_phone = get_phoneme_level_pitch(duration, pitch), get_phoneme_level_energy(duration, energy)
 
+        # Skip mel that the len is too large
+        if mel_spectrogram.shape[1] > self.skip_mel_len:
+            return None
+        
         # Save files
         dur_filename = "{}-duration-{}.npy".format(speaker, basename)
         np.save(os.path.join(self.out_dir, "duration", dur_filename), duration)

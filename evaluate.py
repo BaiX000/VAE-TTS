@@ -23,7 +23,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, len_losses
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=False,
+        shuffle=True,
         collate_fn=dataset.collate_fn,
     )
 
@@ -86,5 +86,7 @@ def evaluate(device, model, step, configs, logger=None, vocoder=None, len_losses
             sampling_rate=sampling_rate,
             tag="Validation/step_{}_{}_synthesized".format(step, tag),
         )
-
+    
+    # ---- end ----
+        
     return message

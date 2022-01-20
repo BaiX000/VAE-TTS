@@ -1,3 +1,7 @@
 python3 train.py --dataset AISHELL3
 
-python3 synthesize.py --text "不可以色色" --speaker_ids SSB1024 SSB1782 --restore_step 25000 --mode single --dataset AISHELL3
+python3 synthesize.py --text "my father came there when he was eighty years of age." --restore_step 600000 --mode single --dataset LibriTTS --speaker_id 5655
+python3 synthesize.py --text "清新的茶樹香氣，隨身好防護" --restore_step 800000 --mode single --dataset AISHELL3 --speaker_id SSB1831
+python3 synthesize.py --text "搜搜蘇打綠的歌，不可以色色" --restore_step 300000 --mode single --dataset AISHELL3 --speaker_id SSB1328
+python3 synthesize.py --text "高客單價的豪華露營一位難求，一帳週末要價一萬三千元的營地，依舊熱銷" --restore_step 800000 --mode single --dataset AISHELL3 --speaker_id_vae SSB1328
+python3 synthesize.py --text "不可以色色，好嗎" --restore_step 100000 --mode single --dataset AISHELL3 --speaker_id SSB0012

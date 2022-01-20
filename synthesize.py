@@ -97,7 +97,8 @@ def synthesize(device, model, args, configs, vocoder, batchs, control_values):
                 spker_embeds=batch[-1],
                 p_control=pitch_control,
                 e_control=energy_control,
-                d_control=duration_control
+                d_control=duration_control,
+                step = args.restore_step,
             )
             synth_samples(
                 batch,
@@ -139,11 +140,32 @@ if __name__ == "__main__":
         help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
     )
     parser.add_argument(
-        "--speaker_ids",
+        "--speaker_id_vae",
+        type=str,
+        help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
+    )
+    parser.add_argument(
+        "--speaker_ids_vae",
         type=str,
         nargs='+', 
         help="speaker IDs for multi-speaker synthesis, for single-sentence mode only",
     )
+    parser.add_argument(
+        "--speaker_gen",
+        type=bool,
+        help="generated speaker embed",
+    )
+    parser.add_argument(
+        "--speaker_id_cross",
+        type=str,
+        help="test",
+    )
+    parser.add_argument(
+        "--speaker_vae_cross",
+        type=str,
+        help="test",
+    )
+    
     parser.add_argument(
         "--dataset",
         type=str,
@@ -183,9 +205,9 @@ if __name__ == "__main__":
         os.path.join(train_config["path"]["result_path"], str(args.restore_step)), exist_ok=True)
 
     # Set Device
-    torch.manual_seed(train_config["seed"])
+    #torch.manual_seed(train_config["seed"])
     if torch.cuda.is_available():
-        torch.cuda.manual_seed(train_config["seed"])
+        #torch.cuda.manual_seed(train_config["seed"])
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
@@ -215,9 +237,7 @@ if __name__ == "__main__":
         with open(os.path.join(preprocess_config["path"]["preprocessed_path"], "speakers.json")) as f:
             speaker_map = json.load(f)
             
-        # get speaker embed
-        print(args.speaker_id,args.speaker_ids )
-        assert args.speaker_id or args.speaker_ids        
+        # get speaker embed        
         if args.speaker_id:
             speakers = np.array([speaker_map[args.speaker_id]]) if model_config["multi_speaker"] else np.array([0]) # single speaker is allocated 0
             spker_embed = np.load(os.path.join(
@@ -225,12 +245,51 @@ if __name__ == "__main__":
                 "spker_embed",
                 "{}-spker_embed.npy".format(args.speaker_id),
             )) if load_spker_embed else None
-        elif args.speaker_ids:
-            assert len(args.speaker_ids) == 2
+            model_config["vae_type"] = 'None'
+        
+        elif args.speaker_id_vae:
+            speakers = np.array([speaker_map[args.speaker_id_vae]]) if model_config["multi_speaker"] else np.array([0]) # single speaker is allocated 0
+            spker_embed = np.load(os.path.join(
+                preprocess_config["path"]["preprocessed_path"],
+                "spker_embed",
+                "{}-spker_embed.npy".format(args.speaker_id_vae),
+            )) if load_spker_embed else None
+            spker_embed = torch.from_numpy(spker_embed).float().to(device)  
+            
+            # print vae infos
+            if model_config["vae_type"] == "VAE":
+                mu, log_var = model.vae.encode(spker_embed)
+                z = model.vae.reparameterize(mu, log_var)
+                print(f"mu: {mu.detach()}, std: {0.5*torch.exp(log_var).detach()}, \n z: {z}")
+                
+            elif model_config["vae_type"] == "VSC":
+                mu, log_var, log_spike = model.vae.encode(spker_embed)
+                z = model.vae.reparameterize(mu, log_var, log_spike)
+                print(
+                    f"mu: {mu.detach()}, \n\
+                    std: {0.5*torch.exp(log_var).detach()}, \n\
+                    spike: {log_spike.exp().detach()}, \n\
+                    selection: {torch.sigmoid(150*(torch.randn_like(log_spike)+log_spike.exp()-1))}, \n\
+                    z: {z}"
+                )
+            
+            change_dim = [4, 13, 15]
+            for i in change_dim:
+                z[0][i] = -3
+            change_dim = [0, 3]
+            for i in change_dim:
+                z[0][i] = 2 
+            print(z)
+            
+            spker_embed = model.vae.decode(z)
+            spker_embed = spker_embed.cpu().detach().numpy()
+        
+        elif args.speaker_ids_vae: 
+            assert len(args.speaker_ids_vae) == 2
             model_config["external_speaker_embed"] = True
             speakers = np.array([0]) # ??
-            spker_A_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids[0]))) 
-            spker_B_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids[1]))) 
+            spker_A_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids_vae[0]))) 
+            spker_B_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids_vae[1]))) 
             spker_A_embed = torch.from_numpy(spker_A_embed).float().to(device)
             spker_B_embed = torch.from_numpy(spker_B_embed).float().to(device)
             
@@ -238,14 +297,35 @@ if __name__ == "__main__":
             z_A = model.vae.reparameterize(mu_A, log_var_A)
             mu_B, log_var_B = model.vae.encode(spker_B_embed)
             z_B = model.vae.reparameterize(mu_B, log_var_B)
+            z_mean = (z_A*0.4 + z_B*0.6)
+            print(z_mean)
+            spker_embed = model.vae.decode(z_mean)
+            spker_embed = spker_embed.cpu().detach().numpy()
+        elif args.speaker_gen:
+            speakers = np.array([0]) # ??
+            z = torch.normal(mean=0, std=1, size=(1,16)).float().to(device)
+            #z = abs(z)*2
             
-            mu, log_var= (mu_A + mu_B)/2, (exp(2*log_var_A)+exp(2*log_var_B))**0.5
-            z = model.vae.reparameterize(mu, log_var)
-            #z_mean = z_A*0.9 + z_B*0.1
+            change_dim = [9]
+            for i in change_dim:
+                z[0][i] = -5
+            print(z)
             spker_embed = model.vae.decode(z)
             spker_embed = spker_embed.cpu().detach().numpy()
-            
-
+        
+        elif args.speaker_vae_cross:
+            speakers = np.array([0]) 
+            spker_embed = np.load(os.path.join("preprocessed_data/LibriTTS", "spker_embed", "{}-spker_embed.npy".format(args.speaker_vae_cross)))
+            spker_embed = torch.from_numpy(spker_embed).float().to(device)  
+            mu, log_var = model.vae.encode(spker_embed)
+            z = model.vae.reparameterize(mu, log_var)
+            print(f"mu: {mu.detach()}, std: {0.5*torch.exp(log_var).detach()}, \n z: {z}")
+            spker_embed = model.vae.decode(z)
+            spker_embed = spker_embed.cpu().detach().numpy()
+       
+        elif args.speaker_id_cross:
+            speakers = np.array([0]) 
+            spker_embed = np.load(os.path.join("preprocessed_data/LibriTTS", "spker_embed", "{}-spker_embed.npy".format(args.speaker_id_cross)))
 
         if preprocess_config["preprocessing"]["text"]["language"] == "en":
             texts = np.array([preprocess_english(args.text, preprocess_config)])

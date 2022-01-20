@@ -7,7 +7,8 @@ import torch.nn.functional as F
 
 from .modules import PostNet, VarianceAdaptor
 from utils.tools import get_mask_from_lengths
-from model.vae import VAE
+from model import vae
+import random
 
 class CompTransTTS(nn.Module):
     """ CompTransTTS """
@@ -58,11 +59,19 @@ class CompTransTTS(nn.Module):
                     model_config["external_speaker_dim"],
                     model_config["transformer"]["encoder_hidden"],
                 )
+                
         # add vae model
-        self.vae = VAE()
-        self.external_speaker_embed = model_config["external_speaker_embed"] if "external_speaker_embed" in model_config.keys() else None
-    
-
+        self.vae_type = model_config["vae_type"]
+        if self.vae_type == "None":
+            self.vae = None
+        elif self.vae_type == "VAE":  
+            self.vae = vae.VAE()
+        elif self.vae_type == "VSC":
+            self.vae = vae.VSC()
+            
+        self.vae_start_steps = train_config["vae"]["vae_start_steps"]
+        self.org_embed_rate = train_config["vae"]["org_embed_rate"]
+        
     def forward(
         self,
         speakers,
@@ -90,22 +99,49 @@ class CompTransTTS(nn.Module):
         )
 
         texts, text_embeds = self.encoder(texts, src_masks)
-
-
+        
         speaker_embeds = None
+        # speaker_emb is not None if it is multispeakers. 
+        # speaker_emb will be either nn.Linear(n_speaker, encoder_hidden) or nn.Linear(external_dim(512), encoder_hidden)
         if self.speaker_emb is not None:
             if self.embedder_type == "none":
                 speaker_embeds = self.speaker_emb(speakers) # [B, H]
             else:
                 assert spker_embeds is not None, "Speaker embedding should not be None"
-                # vae process 
-                if self.external_speaker_embed:
+                # A. Training without vae model
+                if self.vae_type is None:
+                    vae_results = None
                     speaker_embeds = self.speaker_emb(spker_embeds)
+                # B. Training with vae model
                 else:
-                    recons_spker_embeds, org_input, mu, log_var = self.vae(spker_embeds)
-                    speaker_embeds = self.speaker_emb(recons_spker_embeds) # [B, H]
-        
-        
+                    if self.vae_type == "VAE":
+                        recons_spker_embeds, org_input, mu, log_var = self.vae(spker_embeds)
+                        vae_results = [recons_spker_embeds, org_input, mu, log_var]
+                    elif self.vae_type == "VSC":
+                        recons_spker_embeds, org_input, mu, log_var, log_spike = self.vae(spker_embeds)
+                        vae_results = [recons_spker_embeds, org_input, mu, log_var, log_spike]
+                            
+                    if self.training:
+                        if step > self.vae_start_steps:
+                            # -- Start VAE finetuning process ---
+                            # Not finetune Encoder part
+                            texts = texts.detach()
+                            text_embeds = text_embeds.detach()        
+                            # pick some org embedding when training
+                            r = random.uniform(0, 1)
+                            speaker_embeds = self.speaker_emb(spker_embeds) if r < self.org_embed_rate else self.speaker_emb(recons_spker_embeds)
+                        else:
+                            speaker_embeds = self.speaker_emb(spker_embeds)
+                            vae_results = None
+
+                    else:                         
+                        # evaluation
+                        if step > self.vae_start_steps:
+                            speaker_embeds = self.speaker_emb(recons_spker_embeds)
+                        else:
+                            speaker_embeds = self.speaker_emb(spker_embeds)
+            
+                        
 
         (
             output,
@@ -156,10 +192,7 @@ class CompTransTTS(nn.Module):
             mel_lens,
             attn_outs,
             # add
-            recons_spker_embeds,
-            org_input,
-            mu,
-            log_var,
+            vae_results,
             # --- 
             p_targets,
             e_targets,            

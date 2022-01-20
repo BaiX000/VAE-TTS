@@ -136,7 +136,7 @@ class Dataset(Dataset):
             attn_priors = pad_3D(attn_priors, len(idxs), max(text_lens), max(mel_lens))
         else:
             durations = pad_1D(durations)
-
+        #print(max(mel_lens))
         return (
             ids,
             raw_texts,

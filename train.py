@@ -19,6 +19,7 @@ from model import CompTransTTSLoss
 from dataset import Dataset
 
 from evaluate import evaluate
+from custom_eval_synth import custom_eval_synth
 
 torch.backends.cudnn.benchmark = True
 
@@ -120,12 +121,16 @@ def train(rank, args, configs, batch_size, num_gpus):
                 optimizer.step_and_update_lr(scaler)
                 scaler.update()
                 optimizer.zero_grad()
+                
+                #update c and prior weight
+                if model_config["vae_type"] == "VSC":
+                    model.vae.update_()             
 
                 if rank == 0:
                     if step % log_step == 0:
                         losses = [l.item() for l in losses]
                         message1 = "Step {}/{}, ".format(step, total_step)
-                        message2 = "Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}, CTC Loss: {:.4f}, Binarization Loss: {:.4f}, VAE Loss: {:.4f}".format(
+                        message2 = "Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}, CTC Loss: {:.4f}, Binarization Loss: {:.4f}, VAE Loss: {:.4f}, recons Loss: {:.4f}, KLD Loss: {:.4f}".format(
                             *losses
                         )
 
@@ -174,6 +179,9 @@ def train(rank, args, configs, batch_size, num_gpus):
                     if step % val_step == 0:
                         model.eval()
                         message = evaluate(device, model, step, configs, val_logger, vocoder, len(losses))
+                        # custom synth
+                        #custom_eval_synth(device, model, step, configs, val_logger, vocoder)
+                        # ----end----
                         with open(os.path.join(val_log_path, "log.txt"), "a") as f:
                             f.write(message + "\n")
                         outer_bar.write(message)
@@ -234,6 +242,7 @@ if __name__ == "__main__":
     print(' ---> Batch size in total:', batch_size * num_gpus)
     print(" ---> Type of Building Block:", model_config["block_type"])
     print(" ---> Type of Duration Modeling:", "unsupervised" if model_config["duration_modeling"]["learn_alignment"] else "supervised")
+    print(" ---> Type of VAE Modeling:", model_config["vae_type"])
     print("=================================================================================================")
     print("Prepare training ...")
 
