@@ -5,7 +5,7 @@ duration_modeling:
   learn_alignment: True
   aligner_temperature: 0.0005
 
-vae_type: "VAE" # support 'VAE', 'VSC', 'None'
+vae_type: "Simple_VAE" # support 'VAE', 'VSC', 'Simple_VAE', 'None'
 
 transformer:
   encoder_layer: 4

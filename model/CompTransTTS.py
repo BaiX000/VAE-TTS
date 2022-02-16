@@ -68,6 +68,8 @@ class CompTransTTS(nn.Module):
             self.vae = vae.VAE()
         elif self.vae_type == "VSC":
             self.vae = vae.VSC()
+        elif self.vae_type == "Simple_VAE":
+            self.vae = vae.Simple_VAE()
             
         self.vae_start_steps = train_config["vae"]["vae_start_steps"]
         self.org_embed_rate = train_config["vae"]["org_embed_rate"]
@@ -117,9 +119,14 @@ class CompTransTTS(nn.Module):
                     if self.vae_type == "VAE":
                         recons_spker_embeds, org_input, mu, log_var = self.vae(spker_embeds)
                         vae_results = [recons_spker_embeds, org_input, mu, log_var]
+                        
                     elif self.vae_type == "VSC":
                         recons_spker_embeds, org_input, mu, log_var, log_spike = self.vae(spker_embeds)
                         vae_results = [recons_spker_embeds, org_input, mu, log_var, log_spike]
+                    elif self.vae_type == "Simple_VAE":
+                        recons_spker_embeds, org_input, mu, log_var = self.vae(spker_embeds)
+                        vae_results = [recons_spker_embeds, org_input, mu, log_var]
+                        
                             
                     if self.training:
                         if step > self.vae_start_steps:

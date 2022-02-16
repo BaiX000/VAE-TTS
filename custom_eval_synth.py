@@ -88,7 +88,7 @@ def custom_eval_synth(device, model, step, configs, logger=None, vocoder=None):
 
     # Synthesis infomation settings
     speaker_id = "SSB1328"
-    text = "不可以色色"
+    text = "清新的茶樹香氣，隨身好防護"
     
     
     # Load speaker embed  
@@ -106,6 +106,9 @@ def custom_eval_synth(device, model, step, configs, logger=None, vocoder=None):
     elif model_config["vae_type"] == "VSC":
         mu, log_var, log_spike = model.vae.encode(spker_embed)
         z = model.vae.reparameterize(mu, log_var, log_spike)
+    elif model_config["vae_type"] == "Simple_VAE":
+        mu, log_var = model.vae.encode(spker_embed)
+        z = model.vae.reparameterize(mu, log_var)
     
     spker_embed = model.vae.decode(z)
     spker_embed = spker_embed.cpu().detach().numpy()

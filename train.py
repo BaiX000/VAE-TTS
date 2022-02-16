@@ -180,7 +180,7 @@ def train(rank, args, configs, batch_size, num_gpus):
                         model.eval()
                         message = evaluate(device, model, step, configs, val_logger, vocoder, len(losses))
                         # custom synth
-                        #custom_eval_synth(device, model, step, configs, val_logger, vocoder)
+                        custom_eval_synth(device, model, step, configs, val_logger, vocoder)
                         # ----end----
                         with open(os.path.join(val_log_path, "log.txt"), "a") as f:
                             f.write(message + "\n")

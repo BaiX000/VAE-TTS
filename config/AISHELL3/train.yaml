@@ -4,9 +4,9 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/AISHELL3-VAE-Finetune"
-  log_path: "./output/log/AISHELL3-VAE-Finetune"
-  result_path: "./output/result/AISHELL3-VAE-Finetune"
+  ckpt_path: "./output/ckpt/AISHELL3-Simple_VAE"
+  log_path: "./output/log/AISHELL3-Simple_VAE"
+  result_path: "./output/result/AISHELL3-Simple_VAE"
 optimizer:
   batch_size: 10 #16
   betas: [0.9, 0.98]
@@ -28,8 +28,8 @@ duration:
   binarization_loss_enable_steps: 18000
   binarization_loss_warmup_steps: 10000
 vae:
-  vae_start_steps: 250000
-  kld_loss_enable_steps: 260000
-  kld_loss_warmup_steps: 10000
-  kld_final_weight: 0.001
+  vae_start_steps: 200000 # 250000
+  kld_loss_enable_steps: 200000 #260000 # When to start calculating KLD Loss
+  kld_loss_warmup_steps: 10000 
+  kld_final_weight: 0.01 # 0.001
   org_embed_rate: 0.2

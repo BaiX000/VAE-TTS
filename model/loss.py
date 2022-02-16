@@ -31,12 +31,14 @@ class CompTransTTSLoss(nn.Module):
         
         # check vae type
         self.vae_type = model_config["vae_type"]
-        assert self.vae_type in ['VAE', 'VSC']
+        assert self.vae_type in ['VAE', 'VSC', 'Simple_VAE']
         if self.vae_type == "VAE":
             self.vae_loss = vae.VAE().loss_function
         elif self.vae_type == "VSC":
             self.vae_loss = vae.VSC().loss_function 
-
+        elif self.vae_type == "Simple_VAE":
+            self.vae_loss = vae.Simple_VAE().loss_function 
+            
     def forward(self, inputs, predictions, step):
         (
             mel_targets,
@@ -120,14 +122,14 @@ class CompTransTTSLoss(nn.Module):
 
         # VAE LOSS
         if vae_results is not None:
-            if self.vae_type == "VAE":             
+            if self.vae_type == "VAE" or self.vae_type == "Simple_VAE":             
                 recons, org_input, mu, log_var = vae_results
                 recons_loss, kld_loss = self.vae_loss(recons, org_input, mu, log_var)          
 
-            if self.vae_type == "VSC":
+            elif self.vae_type == "VSC":
                 recons, org_input, mu, log_var, log_spike = vae_results
-                recons_loss, kld_loss = self.vae_loss(recons, org_input, mu, log_var, log_spike)
-        
+                recons_loss, kld_loss = self.vae_loss(recons, org_input, mu, log_var, log_spike)         
+            
             if step < self.vae_start_steps:
                 kld_loss = kld_loss * 0.
                 recons_loss = recons_loss * 0 
