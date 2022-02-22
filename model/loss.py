@@ -49,6 +49,7 @@ class CompTransTTSLoss(nn.Module):
             duration_targets,
             _,
             _,
+            _,
         ) = inputs[6:]
         (
             mel_predictions,

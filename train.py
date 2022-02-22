@@ -16,7 +16,7 @@ from tqdm import tqdm
 from utils.model import get_model, get_vocoder, get_param_num
 from utils.tools import get_configs_of, to_device, log, synth_one_sample
 from model import CompTransTTSLoss
-from dataset import Dataset
+from dataset import Dataset, ConcatDataset
 
 from evaluate import evaluate
 from custom_eval_synth import custom_eval_synth
@@ -35,21 +35,36 @@ def train(rank, args, configs, batch_size, num_gpus):
         )
     device = torch.device('cuda:{:d}'.format(rank))
 
-    # Get dataset
-    dataset = Dataset(
-        "train.txt", preprocess_config, model_config, train_config, sort=True, drop_last=True
+    # Get for cross-lingual dataset  
+    config_dir = os.path.join("./config", args.dataset)
+    preprocess_config_en = yaml.load(open(
+        os.path.join(config_dir, "preprocess_en.yaml"), "r"), Loader=yaml.FullLoader)
+    preprocess_config_zh = yaml.load(open(
+        os.path.join(config_dir, "preprocess_zh.yaml"), "r"), Loader=yaml.FullLoader)
+    
+    dataset_en = Dataset(
+        "train.txt", preprocess_config_en, model_config, train_config, sort=True, drop_last=True
     )
+    dataset_zh = Dataset(
+        "train.txt", preprocess_config_zh, model_config, train_config, sort=True, drop_last=True
+    )    
+    # combine two monolingual datasets
+    dataset = ConcatDataset([dataset_en, dataset_zh], preprocess_config, model_config, train_config, sort=True, drop_last=True)
+    
+    
+    
+    
     data_sampler = DistributedSampler(dataset) if num_gpus > 1 else None
     group_size = 4  # Set this larger than 1 to enable sorting in Dataset
     assert batch_size * group_size < len(dataset)
     loader = DataLoader(
         dataset,
         batch_size=batch_size * group_size,
-        shuffle=False,
+        shuffle=True,
         sampler=data_sampler,
         collate_fn=dataset.collate_fn,
     )
-
+    
     # Prepare model
     model, optimizer = get_model(args, configs, device, train=True)
     if num_gpus > 1:
@@ -98,7 +113,6 @@ def train(rank, args, configs, batch_size, num_gpus):
                 break
             for batch in batchs:
                 batch = to_device(batch, device)
-
                 with amp.autocast(args.use_amp):
                     # Forward
                     output = model(*(batch[2:]), step=step)
@@ -178,9 +192,9 @@ def train(rank, args, configs, batch_size, num_gpus):
 
                     if step % val_step == 0:
                         model.eval()
-                        message = evaluate(device, model, step, configs, val_logger, vocoder, len(losses))
+                        message = evaluate(device, model, step, configs, args, val_logger, vocoder, len(losses))
                         # custom synth
-                        custom_eval_synth(device, model, step, configs, val_logger, vocoder)
+                        #custom_eval_synth(device, model, step, configs, val_logger, vocoder)
                         # ----end----
                         with open(os.path.join(val_log_path, "log.txt"), "a") as f:
                             f.write(message + "\n")

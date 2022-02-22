@@ -3,17 +3,113 @@ import math
 import os
 
 import numpy as np
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, ConcatDataset
 
 from text import text_to_sequence
 from utils.tools import get_variance_level, pad_1D, pad_2D, pad_3D
 
 
+class ConcatDataset(ConcatDataset):
+    def __init__(self, datasets, preprocess_config, model_config, train_config, sort=False, drop_last=False):
+        super().__init__(datasets)
+        self.sort = sort
+        self.drop_last = drop_last
+        self.batch_size = train_config["optimizer"]["batch_size"]
+        self.learn_alignment = model_config["duration_modeling"]["learn_alignment"]
+        self.load_spker_embed = model_config["multi_speaker"] \
+            and preprocess_config["preprocessing"]["speaker_embedder"] != 'none'
+        
+        # create a new speaker ids map for datasets
+        for i, d in enumerate(datasets):
+            if i == 0:
+                speaker_map = d.speaker_map
+            else:
+                speaker_map.update(d.speaker_map)
+        # reindex the map
+        for i, key in enumerate(speaker_map.keys()):
+            speaker_map[key] = i
+        self.speaker_map = speaker_map
+        
+        # write the new speaker map to "preprocessed_data/CrossLingual"
+        preprocessed_path = "preprocessed_data/CrossLingual"
+        with open(os.path.join(preprocessed_path, "speakers.json"), "w") as f:
+            f.write(json.dumps(speaker_map))
+
+    def reprocess(self, data, idxs):
+        ids = [data[idx]["id"] for idx in idxs]
+        speakers = [data[idx]["speaker"] for idx in idxs]
+        texts = [data[idx]["text"] for idx in idxs]
+        raw_texts = [data[idx]["raw_text"] for idx in idxs]
+        mels = [data[idx]["mel"] for idx in idxs]
+        pitches = [data[idx]["pitch"] for idx in idxs]
+        energies = [data[idx]["energy"] for idx in idxs]
+        durations = [data[idx]["duration"] for idx in idxs] if not self.learn_alignment else None
+        attn_priors = [data[idx]["attn_prior"] for idx in idxs] if self.learn_alignment else None
+        spker_embeds = np.concatenate(np.array([data[idx]["spker_embed"] for idx in idxs]), axis=0) \
+            if self.load_spker_embed else None
+        lids = [data[idx]["lid"] for idx in idxs]
+
+        text_lens = np.array([text.shape[0] for text in texts])
+        mel_lens = np.array([mel.shape[0] for mel in mels])
+
+        speakers = np.array(speakers)
+        texts = pad_1D(texts)
+        mels = pad_2D(mels)
+        pitches = pad_1D(pitches)
+        energies = pad_1D(energies)
+        lids = np.array(lids)
+        
+        if self.learn_alignment:
+            attn_priors = pad_3D(attn_priors, len(idxs), max(text_lens), max(mel_lens))
+        else:
+            durations = pad_1D(durations)
+        #print(max(mel_lens))
+        return (
+            ids,
+            raw_texts,
+            speakers,
+            texts,
+            text_lens,
+            max(text_lens),
+            mels,
+            mel_lens,
+            max(mel_lens),
+            pitches,
+            energies,
+            durations,
+            attn_priors,
+            spker_embeds,
+            lids,
+        )
+
+    def collate_fn(self, data):
+        data_size = len(data)
+
+        if self.sort:
+            len_arr = np.array([d["text"].shape[0] for d in data])
+            idx_arr = np.argsort(-len_arr)
+        else:
+            idx_arr = np.arange(data_size)
+
+        tail = idx_arr[len(idx_arr) - (len(idx_arr) % self.batch_size) :]
+        idx_arr = idx_arr[: len(idx_arr) - (len(idx_arr) % self.batch_size)]
+        idx_arr = idx_arr.reshape((-1, self.batch_size)).tolist()
+        if not self.drop_last and len(tail) > 0:
+            idx_arr += [tail.tolist()]
+
+        output = list()
+        for idx in idx_arr:
+            output.append(self.reprocess(data, idx))
+        
+        return output
+            
+            
 class Dataset(Dataset):
     def __init__(
         self, filename, preprocess_config, model_config, train_config, sort=False, drop_last=False
     ):
         self.dataset_name = preprocess_config["dataset"]
+        assert self.dataset_name in ["AISHELL3", "LibriTTS"]
         self.preprocessed_path = preprocess_config["path"]["preprocessed_path"]
         self.cleaners = preprocess_config["preprocessing"]["text"]["text_cleaners"]
         self.batch_size = train_config["optimizer"]["batch_size"]
@@ -79,6 +175,9 @@ class Dataset(Dataset):
             "spker_embed",
             "{}-spker_embed.npy".format(speaker),
         )) if self.load_spker_embed else None
+        
+        lid = 0 if self.dataset_name=="LibriTTS" else 1
+        
 
         sample = {
             "id": basename,
@@ -91,6 +190,7 @@ class Dataset(Dataset):
             "duration": duration,
             "attn_prior": attn_prior,
             "spker_embed": spker_embed,
+            "lid": lid,
         }
 
         return sample

@@ -74,6 +74,10 @@ class CompTransTTS(nn.Module):
         self.vae_start_steps = train_config["vae"]["vae_start_steps"]
         self.org_embed_rate = train_config["vae"]["org_embed_rate"]
         
+        
+        # add lid embedding table
+        self.language_emb = nn.Embedding(2, model_config["transformer"]["encoder_hidden"])
+        
     def forward(
         self,
         speakers,
@@ -88,11 +92,13 @@ class CompTransTTS(nn.Module):
         d_targets=None,
         attn_priors=None,
         spker_embeds=None,
+        lids=None,
         p_control=1.0,
         e_control=1.0,
         d_control=1.0,
         step=None,
     ):
+        
         src_masks = get_mask_from_lengths(src_lens, max_src_len)
         mel_masks = (
             get_mask_from_lengths(mel_lens, max_mel_len)
@@ -147,8 +153,7 @@ class CompTransTTS(nn.Module):
                             speaker_embeds = self.speaker_emb(recons_spker_embeds)
                         else:
                             speaker_embeds = self.speaker_emb(spker_embeds)
-            
-                        
+        language_embeds = self.language_emb(lids)
 
         (
             output,
@@ -163,6 +168,7 @@ class CompTransTTS(nn.Module):
             attn_outs,
         ) = self.variance_adaptor(
             speaker_embeds,
+            language_embeds,
             texts,
             text_embeds,
             src_lens,

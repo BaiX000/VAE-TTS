@@ -1,4 +1,4 @@
-python3 train.py --dataset AISHELL3
+python3 train.py --dataset CrossLingual
 
 python3 synthesize.py --text "my father came there when he was eighty years of age." --restore_step 600000 --mode single --dataset LibriTTS --speaker_id 5655
 python3 synthesize.py --text "清新的茶樹香氣，隨身好防護" --restore_step 800000 --mode single --dataset AISHELL3 --speaker_id SSB1831

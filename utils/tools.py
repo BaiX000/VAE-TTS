@@ -82,7 +82,7 @@ def get_phoneme_level_energy(duration, energy):
 
 
 def to_device(data, device):
-    if len(data) == 14:
+    if len(data) == 15:
         (
             ids,
             raw_texts,
@@ -98,6 +98,7 @@ def to_device(data, device):
             durations,
             attn_priors,
             spker_embeds,
+            lids,
         ) = data
 
         speakers = torch.from_numpy(speakers).long().to(device)
@@ -113,6 +114,7 @@ def to_device(data, device):
             attn_priors = torch.from_numpy(attn_priors).float().to(device)
         if spker_embeds is not None:
             spker_embeds = torch.from_numpy(spker_embeds).float().to(device)
+        lids = torch.from_numpy(lids).long().to(device)
 
         return [
             ids,
@@ -129,10 +131,11 @@ def to_device(data, device):
             durations,
             attn_priors,
             spker_embeds,
+            lids,
         ]
 
-    if len(data) == 7:
-        (ids, raw_texts, speakers, texts, src_lens, max_src_len, spker_embeds) = data
+    if len(data) == 8:
+        (ids, raw_texts, speakers, texts, src_lens, max_src_len, spker_embeds, lids) = data
 
         speakers = torch.from_numpy(speakers).long().to(device)
         texts = torch.from_numpy(texts).long().to(device)
