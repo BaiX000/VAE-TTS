@@ -63,7 +63,6 @@ class ConcatDataset(ConcatDataset):
             attn_priors = pad_3D(attn_priors, len(idxs), max(text_lens), max(mel_lens))
         else:
             durations = pad_1D(durations)
-        #print(max(mel_lens))
         return (
             ids,
             raw_texts,
@@ -177,7 +176,6 @@ class Dataset(Dataset):
         )) if self.load_spker_embed else None
         
         lid = 0 if self.dataset_name=="LibriTTS" else 1
-        
 
         sample = {
             "id": basename,
@@ -236,7 +234,6 @@ class Dataset(Dataset):
             attn_priors = pad_3D(attn_priors, len(idxs), max(text_lens), max(mel_lens))
         else:
             durations = pad_1D(durations)
-        #print(max(mel_lens))
         return (
             ids,
             raw_texts,

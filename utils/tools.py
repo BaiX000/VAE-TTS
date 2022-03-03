@@ -158,9 +158,9 @@ def log(
         logger.add_scalar("Loss/duration_loss", losses[5], step)
         logger.add_scalar("Loss/ctc_loss", losses[6], step)
         logger.add_scalar("Loss/bin_loss", losses[7], step)
-        logger.add_scalar("Loss/vae_loss", losses[8], step)
-        logger.add_scalar("Loss/recons_loss", losses[9], step)
-        logger.add_scalar("Loss/KLD_loss", losses[10], step)
+        #logger.add_scalar("Loss/vae_loss", losses[8], step)
+        #logger.add_scalar("Loss/recons_loss", losses[9], step)
+        #logger.add_scalar("Loss/KLD_loss", losses[10], step)
 
     if fig is not None:
         logger.add_figure(tag, fig)

@@ -66,7 +66,7 @@ class Preprocessor:
         if self.multi_speaker and preprocess_config["preprocessing"]["speaker_embedder"] != "none":
             self.speaker_emb = PreDefinedEmbedder(preprocess_config)
             self.speaker_emb_dict = self._init_spker_embeds(self.in_sub_dirs)
-        self.skip_mel_len = preprocess_config["preprocessing"]["skip_mel_len"] if "skip_mel_len" in preprocess_config["preprocessing"].keys() else 0
+        self.skip_mel_len = preprocess_config["preprocessing"]["skip_mel_len"] if "skip_mel_len" in preprocess_config["preprocessing"].keys() else 1500
 
     def _init_spker_embeds(self, spkers):
         spker_embeds = dict()
@@ -145,11 +145,13 @@ class Preprocessor:
                 process_info[speaker] = {}
                 process_info[speaker]["total_uttr"] = 0
                 process_info[speaker]["remain_uttr"] = 0      
-        print(f"skip_mel_len: {self.skip_mel_len}")
+        print(f"Skip mels that length is larger than {self.skip_mel_len}.")
         # Compute pitch, energy, duration, and mel-spectrogram
         speakers = {}      
         for i, speaker in enumerate(tqdm(self.in_sub_dirs)):
             save_speaker_emb = self.speaker_emb is not None and speaker not in skip_speakers
+            print(self.speaker_emb, skip_speakers)
+            print(speaker, save_speaker_emb)
             if os.path.isdir(os.path.join(self.in_dir, speaker)):
                 speakers[speaker] = i
         
@@ -197,9 +199,11 @@ class Preprocessor:
                 # Calculate and save mean speaker embedding of this speaker
                 if save_speaker_emb:
                     spker_embed_filename = '{}-spker_embed.npy'.format(speaker)
+                    print("save!!", spker_embed_filename)
+
                     np.save(os.path.join(self.out_dir, 'spker_embed', spker_embed_filename), \
                         np.mean(self.speaker_emb_dict[speaker], axis=0), allow_pickle=False)
-
+                    
         print("Computing statistic quantities ...")
         # Perform normalization if necessary
         pitch_frame_stats, energy_frame_stats = compute_stats(

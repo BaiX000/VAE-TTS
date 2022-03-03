@@ -59,22 +59,7 @@ class CompTransTTS(nn.Module):
                     model_config["external_speaker_dim"],
                     model_config["transformer"]["encoder_hidden"],
                 )
-                
-        # add vae model
-        self.vae_type = model_config["vae_type"]
-        if self.vae_type == "None":
-            self.vae = None
-        elif self.vae_type == "VAE":  
-            self.vae = vae.VAE()
-        elif self.vae_type == "VSC":
-            self.vae = vae.VSC()
-        elif self.vae_type == "Simple_VAE":
-            self.vae = vae.Simple_VAE()
-            
-        self.vae_start_steps = train_config["vae"]["vae_start_steps"]
-        self.org_embed_rate = train_config["vae"]["org_embed_rate"]
-        
-        
+                    
         # add lid embedding table
         self.language_emb = nn.Embedding(2, model_config["transformer"]["encoder_hidden"])
         
@@ -116,43 +101,8 @@ class CompTransTTS(nn.Module):
                 speaker_embeds = self.speaker_emb(speakers) # [B, H]
             else:
                 assert spker_embeds is not None, "Speaker embedding should not be None"
-                # A. Training without vae model
-                if self.vae_type is None:
-                    vae_results = None
-                    speaker_embeds = self.speaker_emb(spker_embeds)
-                # B. Training with vae model
-                else:
-                    if self.vae_type == "VAE":
-                        recons_spker_embeds, org_input, mu, log_var = self.vae(spker_embeds)
-                        vae_results = [recons_spker_embeds, org_input, mu, log_var]
-                        
-                    elif self.vae_type == "VSC":
-                        recons_spker_embeds, org_input, mu, log_var, log_spike = self.vae(spker_embeds)
-                        vae_results = [recons_spker_embeds, org_input, mu, log_var, log_spike]
-                    elif self.vae_type == "Simple_VAE":
-                        recons_spker_embeds, org_input, mu, log_var = self.vae(spker_embeds)
-                        vae_results = [recons_spker_embeds, org_input, mu, log_var]
-                        
-                            
-                    if self.training:
-                        if step > self.vae_start_steps:
-                            # -- Start VAE finetuning process ---
-                            # Not finetune Encoder part
-                            texts = texts.detach()
-                            text_embeds = text_embeds.detach()        
-                            # pick some org embedding when training
-                            r = random.uniform(0, 1)
-                            speaker_embeds = self.speaker_emb(spker_embeds) if r < self.org_embed_rate else self.speaker_emb(recons_spker_embeds)
-                        else:
-                            speaker_embeds = self.speaker_emb(spker_embeds)
-                            vae_results = None
-
-                    else:                         
-                        # evaluation
-                        if step > self.vae_start_steps:
-                            speaker_embeds = self.speaker_emb(recons_spker_embeds)
-                        else:
-                            speaker_embeds = self.speaker_emb(spker_embeds)
+                speaker_embeds = self.speaker_emb(spker_embeds)
+              
         language_embeds = self.language_emb(lids)
 
         (
@@ -204,9 +154,6 @@ class CompTransTTS(nn.Module):
             src_lens,
             mel_lens,
             attn_outs,
-            # add
-            vae_results,
-            # --- 
             p_targets,
             e_targets,            
         )

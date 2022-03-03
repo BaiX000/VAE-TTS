@@ -1,11 +1,11 @@
 block_type: "transformer"
 external_speaker_dim: 512
 
+gradient_reversal: True
+
 duration_modeling:
   learn_alignment: True
   aligner_temperature: 0.0005
-
-vae_type: "VAE" # support 'VAE', 'VSC', 'Simple_VAE', 'None'
 
 transformer:
   encoder_layer: 4

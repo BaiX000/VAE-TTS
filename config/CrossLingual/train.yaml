@@ -4,16 +4,16 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/CrossLingual-VAE-woLangEmbedInAlign"
-  log_path: "./output/log/CrossLingual-VAE-woLangEmbedInAlign"
-  result_path: "./output/result/CrossLingual-VAE-woLangEmbedInAlign"
+  ckpt_path: "./output/ckpt/Standard-CrossLingual-Data-50-50"
+  log_path: "./output/log/Standard-CrossLingual-Data-50-50"
+  result_path: "./output/result/CStandard-CrossLingual-Data-50-50"
 optimizer:
-  batch_size: 8 #16
+  batch_size: 36 #16
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
   grad_clip_thresh: 1.0
-  grad_acc_step: 2
+  grad_acc_step: 1
   warm_up_step: 4000
   anneal_steps: [300000, 400000, 500000]
   anneal_rate: 0.3
@@ -27,9 +27,3 @@ duration:
   binarization_start_steps: 6000
   binarization_loss_enable_steps: 18000
   binarization_loss_warmup_steps: 10000
-vae:
-  vae_start_steps: 300000 # 250000
-  kld_loss_enable_steps: 310000 #260000 # When to start calculating KLD Loss
-  kld_loss_warmup_steps: 10000 
-  kld_final_weight: 0.01 # 0.001
-  org_embed_rate: 0.2
