@@ -7,8 +7,8 @@ import torch.nn.functional as F
 
 from .modules import PostNet, VarianceAdaptor
 from utils.tools import get_mask_from_lengths
-from model import vae
-import random
+from .gradient_reversal import grad_reverse
+from .speaker_classifier import SpeakerClassifier
 
 class CompTransTTS(nn.Module):
     """ CompTransTTS """
@@ -63,6 +63,23 @@ class CompTransTTS(nn.Module):
         # add lid embedding table
         self.language_emb = nn.Embedding(2, model_config["transformer"]["encoder_hidden"])
         
+        # add gradient reversal component
+        self.speaker_classifier = None
+        if model_config["gradient_reversal"]["enable"]:
+            with open(
+                    os.path.join(
+                        preprocess_config["path"]["preprocessed_path"], "speakers.json"
+                    ),
+                    "r",
+                ) as f:
+                    n_speaker = len(json.load(f))
+            self.speaker_classifier = SpeakerClassifier(
+                model_config["transformer"]["encoder_hidden"],
+                model_config["gradient_reversal"]["spker_clsfir_hidden"],
+                n_speaker,
+            )
+            
+        
     def forward(
         self,
         speakers,
@@ -92,6 +109,14 @@ class CompTransTTS(nn.Module):
         )
 
         texts, text_embeds = self.encoder(texts, src_masks)
+        
+        # add gradient revesal
+        spker_clsfir_output = None
+        if self.speaker_classifier is not None:
+            texts_for_spker_clsfir = grad_reverse(texts)
+            spker_clsfir_output = self.speaker_classifier(texts_for_spker_clsfir, src_masks)
+        
+        
         
         speaker_embeds = None
         # speaker_emb is not None if it is multispeakers. 
@@ -154,6 +179,8 @@ class CompTransTTS(nn.Module):
             src_lens,
             mel_lens,
             attn_outs,
+            # -- add --
+            spker_clsfir_output,
             p_targets,
             e_targets,            
         )

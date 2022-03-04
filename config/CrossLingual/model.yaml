@@ -1,7 +1,11 @@
 block_type: "transformer"
 external_speaker_dim: 512
 
-gradient_reversal: True
+gradient_reversal:
+  enable: True
+  spker_clsfir_loss_weight: 0
+  spker_clsfir_hidden: 256
+
 
 duration_modeling:
   learn_alignment: True

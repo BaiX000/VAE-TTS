@@ -24,8 +24,13 @@ class CompTransTTSLoss(nn.Module):
         self.mse_loss = nn.MSELoss()
         self.mae_loss = nn.L1Loss()
         
+        if model_config["gradient_reversal"]["enable"]:
+            self.spker_clsfir_weight = model_config["gradient_reversal"]["spker_clsfir_loss_weight"]
+            self.ce_loss = nn.CrossEntropyLoss()
+        
             
     def forward(self, inputs, predictions, step):
+        spker_targets = inputs[2]
         (
             mel_targets,
             _,
@@ -48,7 +53,9 @@ class CompTransTTSLoss(nn.Module):
             mel_masks,
             src_lens,
             mel_lens,
-            attn_outs,       
+            attn_outs,
+            # -- add --
+            spker_clsfir_output,
         ) = predictions
         
         src_masks = ~src_masks
@@ -106,8 +113,26 @@ class CompTransTTSLoss(nn.Module):
             bin_loss = self.bin_loss(hard_attention=attn_hard, soft_attention=attn_soft) * bin_loss_weight
 
 
+        # Gradient Reversal
+        weighted_speaker_loss = 0.0
+        if spker_clsfir_output is not None:
+            '''
+            speaker_target: [B, ]
+            spker_clsfir_output: [B, L, H]
+            '''
+            spker_targets.requires_grad = False
+            expand_spker_targets = spker_targets.repeat_interleave(spker_clsfir_output.shape[1])
+            spker_clsfir_output = spker_clsfir_output.reshape(-1, spker_clsfir_output.shape[-1])
+            mask_index = spker_clsfir_output.abs().sum(dim=1)!=0
+            spker_clsfir_output = spker_clsfir_output[mask_index]
+            expand_spker_targets = expand_spker_targets[mask_index]
+            speaker_loss = self.ce_loss(spker_clsfir_output, expand_spker_targets)/spker_targets.shape[0]
+            weighted_speaker_loss = self.spker_clsfir_weight*speaker_loss
+            
+            
+
         total_loss = (
-            mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss + ctc_loss + bin_loss
+            mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss + ctc_loss + bin_loss + weighted_speaker_loss
         )
 
         return (
@@ -119,6 +144,7 @@ class CompTransTTSLoss(nn.Module):
             duration_loss,
             ctc_loss,
             bin_loss,
+            weighted_speaker_loss,
         )
 
 

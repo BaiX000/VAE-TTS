@@ -59,7 +59,7 @@ def train(rank, args, configs, batch_size, num_gpus):
     loader = DataLoader(
         dataset,
         batch_size=batch_size * group_size,
-        shuffle=False,
+        shuffle=True,
         sampler=data_sampler,
         collate_fn=dataset.collate_fn,
     )
@@ -139,7 +139,7 @@ def train(rank, args, configs, batch_size, num_gpus):
                     if step % log_step == 0:
                         losses = [l.item() for l in losses]
                         message1 = "Step {}/{}, ".format(step, total_step)
-                        message2 = "Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}, CTC Loss: {:.4f}, Binarization Loss: {:.4f}".format(
+                        message2 = "Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}, CTC Loss: {:.4f}, Binarization Loss: {:.4f}, Speaker Loss:{:.4f}".format(
                             *losses
                         )
 
@@ -249,6 +249,7 @@ if __name__ == "__main__":
     print(' ---> Batch size in total:', batch_size * num_gpus)
     print(" ---> Type of Building Block:", model_config["block_type"])
     print(" ---> Type of Duration Modeling:", "unsupervised" if model_config["duration_modeling"]["learn_alignment"] else "supervised")
+    print(" ---> Enable Gradient Reversal:", "True" if model_config["gradient_reversal"]["enable"] else "False")
     print("=================================================================================================")
     print("Prepare training ...")
 
