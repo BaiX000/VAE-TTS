@@ -8,12 +8,12 @@ path:
   log_path: "./output/log/Gradient-Reversal-CrossLingual-Data-50-50-weight0_02"
   result_path: "./output/result/Gradient-Reversal-CrossLingual-Data-50-50-weight0_02"
 optimizer:
-  batch_size: 2 #16
+  batch_size: 4 
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
   grad_clip_thresh: 1.0
-  grad_acc_step: 4
+  grad_acc_step: 1
   warm_up_step: 4000
   anneal_steps: [300000, 400000, 500000]
   anneal_rate: 0.3

@@ -9,7 +9,7 @@ from .modules import PostNet, VarianceAdaptor
 from utils.tools import get_mask_from_lengths
 from .gradient_reversal import grad_reverse
 from .speaker_classifier import SpeakerClassifier
-
+from .residual_encoder import ResidualEncoder
 class CompTransTTS(nn.Module):
     """ CompTransTTS """
 
@@ -77,6 +77,14 @@ class CompTransTTS(nn.Module):
                 model_config["transformer"]["encoder_hidden"],
                 model_config["gradient_reversal"]["spker_clsfir_hidden"],
                 n_speaker,
+            )
+            
+        # add residual encoding
+        if model_config["residual_encoder"]["enable"]:
+            self.residual_encoder = ResidualEncoder(
+                n_mel_channels=preprocess_config["preprocessing"]["mel"]["n_mel_channels"],
+                decoder_hidden=model_config["transformer"]["decoder_hidden"],
+                residual_encoding_dim=model_config["residual_encoder"]["residual_encoder_dim"],
             )
             
         
@@ -161,6 +169,9 @@ class CompTransTTS(nn.Module):
             d_control,
             step,
         )
+
+        #residual_encoding = self.residual_encoder(mels)
+        
 
         output, mel_masks = self.decoder(output, mel_masks)
         output = self.mel_linear(output)
