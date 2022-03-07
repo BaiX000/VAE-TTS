@@ -4,9 +4,9 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/Gradient-Reversal-CrossLingual-Data-50-50-weight0_02"
-  log_path: "./output/log/Gradient-Reversal-CrossLingual-Data-50-50-weight0_02"
-  result_path: "./output/result/Gradient-Reversal-CrossLingual-Data-50-50-weight0_02"
+  ckpt_path: "./output/ckpt/Standard-CrossLingual-Data-50-50"
+  log_path: "./output/log/Standard-CrossLingual-Data-50-50"
+  result_path: "./output/result/Standard-CrossLingual-Data-50-50"
 optimizer:
   batch_size: 4 
   betas: [0.9, 0.98]

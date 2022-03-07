@@ -93,8 +93,9 @@ def synthesize(device, model, args, configs, vocoder, batchs, control_values):
         with torch.no_grad():
             # Forward
             output = model(
-                *(batch[2:-1]),
-                spker_embeds=batch[-1],
+                *(batch[2:-2]),
+                spker_embeds=batch[-2],
+                lids = batch[-1],
                 p_control=pitch_control,
                 e_control=energy_control,
                 d_control=duration_control,
@@ -140,32 +141,22 @@ if __name__ == "__main__":
         help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
     )
     parser.add_argument(
-        "--speaker_id_vae",
+        "--text_lang",
         type=str,
-        help="speaker ID for multi-speaker synthesis, for single-sentence mode only",
+        required=True,
+        help="language of input text"
     )
     parser.add_argument(
-        "--speaker_ids_vae",
+        "--lang",
         type=str,
-        nargs='+', 
-        help="speaker IDs for multi-speaker synthesis, for single-sentence mode only",
-    )
-    parser.add_argument(
-        "--speaker_gen",
-        type=bool,
-        help="generated speaker embed",
+        required=True,
+        help="language embedding selection"
     )
     parser.add_argument(
         "--speaker_id_cross",
         type=str,
         help="test",
     )
-    parser.add_argument(
-        "--speaker_vae_cross",
-        type=str,
-        help="test",
-    )
-    
     parser.add_argument(
         "--dataset",
         type=str,
@@ -247,92 +238,24 @@ if __name__ == "__main__":
             )) if load_spker_embed else None
             model_config["vae_type"] = 'None'
         
-        elif args.speaker_id_vae:
-            speakers = np.array([speaker_map[args.speaker_id_vae]]) if model_config["multi_speaker"] else np.array([0]) # single speaker is allocated 0
-            spker_embed = np.load(os.path.join(
-                preprocess_config["path"]["preprocessed_path"],
-                "spker_embed",
-                "{}-spker_embed.npy".format(args.speaker_id_vae),
-            )) if load_spker_embed else None
-            spker_embed = torch.from_numpy(spker_embed).float().to(device)  
-            
-            # print vae infos
-            if model_config["vae_type"] == "VAE":
-                mu, log_var = model.vae.encode(spker_embed)
-                z = model.vae.reparameterize(mu, log_var)
-                print(f"mu: {mu.detach()}, std: {0.5*torch.exp(log_var).detach()}, \n z: {z}")
-                
-            elif model_config["vae_type"] == "VSC":
-                mu, log_var, log_spike = model.vae.encode(spker_embed)
-                z = model.vae.reparameterize(mu, log_var, log_spike)
-                print(
-                    f"mu: {mu.detach()}, \n\
-                    std: {0.5*torch.exp(log_var).detach()}, \n\
-                    spike: {log_spike.exp().detach()}, \n\
-                    selection: {torch.sigmoid(150*(torch.randn_like(log_spike)+log_spike.exp()-1))}, \n\
-                    z: {z}"
-                )
-            
-            change_dim = [4, 13, 15]
-            for i in change_dim:
-                z[0][i] = -3
-            change_dim = [0, 3]
-            for i in change_dim:
-                z[0][i] = 2 
-            print(z)
-            
-            spker_embed = model.vae.decode(z)
-            spker_embed = spker_embed.cpu().detach().numpy()
-        
-        elif args.speaker_ids_vae: 
-            assert len(args.speaker_ids_vae) == 2
-            model_config["external_speaker_embed"] = True
-            speakers = np.array([0]) # ??
-            spker_A_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids_vae[0]))) 
-            spker_B_embed = np.load(os.path.join(preprocess_config["path"]["preprocessed_path"], "spker_embed", "{}-spker_embed.npy".format(args.speaker_ids_vae[1]))) 
-            spker_A_embed = torch.from_numpy(spker_A_embed).float().to(device)
-            spker_B_embed = torch.from_numpy(spker_B_embed).float().to(device)
-            
-            mu_A, log_var_A = model.vae.encode(spker_A_embed)
-            z_A = model.vae.reparameterize(mu_A, log_var_A)
-            mu_B, log_var_B = model.vae.encode(spker_B_embed)
-            z_B = model.vae.reparameterize(mu_B, log_var_B)
-            z_mean = (z_A*0.4 + z_B*0.6)
-            print(z_mean)
-            spker_embed = model.vae.decode(z_mean)
-            spker_embed = spker_embed.cpu().detach().numpy()
-        elif args.speaker_gen:
-            speakers = np.array([0]) # ??
-            z = torch.normal(mean=0, std=1, size=(1,16)).float().to(device)
-            #z = abs(z)*2
-            
-            change_dim = [9]
-            for i in change_dim:
-                z[0][i] = -5
-            print(z)
-            spker_embed = model.vae.decode(z)
-            spker_embed = spker_embed.cpu().detach().numpy()
-        
-        elif args.speaker_vae_cross:
-            speakers = np.array([0]) 
-            spker_embed = np.load(os.path.join("preprocessed_data/LibriTTS", "spker_embed", "{}-spker_embed.npy".format(args.speaker_vae_cross)))
-            spker_embed = torch.from_numpy(spker_embed).float().to(device)  
-            mu, log_var = model.vae.encode(spker_embed)
-            z = model.vae.reparameterize(mu, log_var)
-            print(f"mu: {mu.detach()}, std: {0.5*torch.exp(log_var).detach()}, \n z: {z}")
-            spker_embed = model.vae.decode(z)
-            spker_embed = spker_embed.cpu().detach().numpy()
-       
         elif args.speaker_id_cross:
             speakers = np.array([0]) 
             spker_embed = np.load(os.path.join("preprocessed_data/LibriTTS", "spker_embed", "{}-spker_embed.npy".format(args.speaker_id_cross)))
 
-        if preprocess_config["preprocessing"]["text"]["language"] == "en":
-            texts = np.array([preprocess_english(args.text, preprocess_config)])
-        elif preprocess_config["preprocessing"]["text"]["language"] == "zh":
-            texts = np.array([preprocess_mandarin(args.text, preprocess_config)])
+            
+        # decide cleaner
+        config_dir = os.path.join("config", args.dataset)
+        preprocess_config_en = yaml.load(open(os.path.join(config_dir, "preprocess_en.yaml"), "r"), Loader=yaml.FullLoader)
+        preprocess_config_zh = yaml.load(open(os.path.join(config_dir, "preprocess_zh.yaml"), "r"), Loader=yaml.FullLoader)
+            
+        if args.text_lang == "en":
+            texts = np.array([preprocess_english(args.text, preprocess_config_en)])
+        elif args.text_lang == "zh":
+            texts = np.array([preprocess_mandarin(args.text, preprocess_config_zh)])
+        lid = np.array([0]) if args.lang == "en" else np.array([1])
+        
         text_lens = np.array([len(texts[0])])
-        batchs = [(ids, raw_texts, speakers, texts, text_lens, max(text_lens), spker_embed)]
+        batchs = [(ids, raw_texts, speakers, texts, text_lens, max(text_lens), spker_embed, lid)]
 
     control_values = args.pitch_control, args.energy_control, args.duration_control
 

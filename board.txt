@@ -5,3 +5,9 @@ python3 synthesize.py --text "清新的茶樹香氣，隨身好防護" --restore
 python3 synthesize.py --text "搜搜蘇打綠的歌，不可以色色" --restore_step 300000 --mode single --dataset AISHELL3 --speaker_id SSB1328
 python3 synthesize.py --text "高客單價的豪華露營一位難求，一帳週末要價一萬三千元的營地，依舊熱銷" --restore_step 800000 --mode single --dataset AISHELL3 --speaker_id_vae SSB1328
 python3 synthesize.py --text "不可以色色，好嗎" --restore_step 100000 --mode single --dataset AISHELL3 --speaker_id SSB0012
+
+
+python3 synthesize.py --text "醫生說是劇烈運動過量所至" --restore_step 200000 --mode single --dataset CrossLingual --speaker_id SSB0005 --text_lang "zh" --lang "zh"
+
+python3 synthesize.py --text "the poetry of nature, which nothing can destroy, shall hedge us round" --restore_step 200000 --mode single --dataset CrossLingual --speaker_id 207 --text_lang "en" --lang "en"
+

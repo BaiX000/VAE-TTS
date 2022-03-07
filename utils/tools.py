@@ -142,8 +142,9 @@ def to_device(data, device):
         src_lens = torch.from_numpy(src_lens).to(device)
         if spker_embeds is not None:
             spker_embeds = torch.from_numpy(spker_embeds).float().to(device)
+        lids = torch.from_numpy(lids).long().to(device)
 
-        return (ids, raw_texts, speakers, texts, src_lens, max_src_len, spker_embeds)
+        return (ids, raw_texts, speakers, texts, src_lens, max_src_len, spker_embeds, lids)
 
 
 def log(

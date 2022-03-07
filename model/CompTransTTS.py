@@ -64,6 +64,7 @@ class CompTransTTS(nn.Module):
         self.language_emb = nn.Embedding(2, model_config["transformer"]["encoder_hidden"])
         
         # add gradient reversal component
+        
         self.speaker_classifier = None
         if model_config["gradient_reversal"]["enable"]:
             with open(
@@ -86,7 +87,6 @@ class CompTransTTS(nn.Module):
                 decoder_hidden=model_config["transformer"]["decoder_hidden"],
                 residual_encoding_dim=model_config["residual_encoder"]["residual_encoder_dim"],
             )
-            
         
     def forward(
         self,
@@ -108,7 +108,6 @@ class CompTransTTS(nn.Module):
         d_control=1.0,
         step=None,
     ):
-        
         src_masks = get_mask_from_lengths(src_lens, max_src_len)
         mel_masks = (
             get_mask_from_lengths(mel_lens, max_mel_len)
