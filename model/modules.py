@@ -334,8 +334,8 @@ class VarianceAdaptor(nn.Module):
                 speaker_embedding,
                 language_embedding,
             )
-            attn_hard = self.binarize_attention_parallel(attn_soft, src_len, mel_len)
-            attn_hard_dur = attn_hard.sum(2)[:, 0, :]
+            attn_hard = self.binarize_attention_parallel(attn_soft, src_len, mel_len) # [B, 1, T, L]
+            attn_hard_dur = attn_hard.sum(2)[:, 0, :] # [B, L]
         attn_out = (attn_soft, attn_hard, attn_hard_dur, attn_logprob)
 
         # Note that there is no pre-extracted phoneme-level variance features in unsupervised duration modeling.
@@ -354,8 +354,8 @@ class VarianceAdaptor(nn.Module):
         # Upsampling from src length to mel length
         if attn_prior is not None: # Trainig of unsupervised duration modeling
             if step < self.binarization_start_steps:
-                A_soft = attn_soft.squeeze(1)
-                x = torch.bmm(A_soft,x)
+                A_soft = attn_soft.squeeze(1) 
+                x = torch.bmm(A_soft,x) # [B, T, L] @ [B, L, encoder_dim] -> [B, T, encoder_dim]
             else:
                 x, mel_len = self.length_regulator(x, attn_hard_dur, max_len)
             duration_rounded = attn_hard_dur
@@ -483,11 +483,10 @@ class AlignmentEncoder(torch.nn.Module):
         '''
             
         keys_enc = self.key_proj(keys)  # B x n_attn_dims x T2
-        queries_enc = self.query_proj(queries)
-
+        queries_enc = self.query_proj(queries) # B x n_attn_dims x T1 
         # Simplistic Gaussian Isotopic Attention
-        attn = (queries_enc[:, :, :, None] - keys_enc[:, :, None]) ** 2  # B x n_attn_dims x T1 x T2
-        attn = -self.temperature * attn.sum(1, keepdim=True)
+        attn = (queries_enc[:, :, :, None] - keys_enc[:, :, None]) ** 2  #  [B, n_attn_dims, T1, 1] - [B, n_attn_dims, 1, T2]   ->  B x n_attn_dims x T1 x T2
+        attn = -self.temperature * attn.sum(1, keepdim=True) # B x 1 x T1 x T2
 
         if attn_prior is not None:
             #print(f"AlignmentEncoder \t| mel: {queries.shape} phone: {keys.shape} mask: {mask.shape} attn: {attn.shape} attn_prior: {attn_prior.shape}")

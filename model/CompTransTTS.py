@@ -79,7 +79,7 @@ class CompTransTTS(nn.Module):
                 model_config["gradient_reversal"]["spker_clsfir_hidden"],
                 n_speaker,
             )
-            
+        '''
         # add residual encoding
         if model_config["residual_encoder"]["enable"]:
             self.residual_encoder = ResidualEncoder(
@@ -87,6 +87,7 @@ class CompTransTTS(nn.Module):
                 decoder_hidden=model_config["transformer"]["decoder_hidden"],
                 residual_encoding_dim=model_config["residual_encoder"]["residual_encoder_dim"],
             )
+        '''
         
     def forward(
         self,
