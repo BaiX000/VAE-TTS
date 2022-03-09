@@ -114,7 +114,7 @@ class CompTransTTSLoss(nn.Module):
 
 
         # Gradient Reversal
-        weighted_speaker_loss = 0.0
+        weighted_speaker_loss = torch.zeros(1).to(spker_targets.device)
         if spker_clsfir_output is not None:
             '''
             speaker_target: [B, ]
@@ -128,9 +128,7 @@ class CompTransTTSLoss(nn.Module):
             expand_spker_targets = expand_spker_targets[mask_index]
             speaker_loss = self.ce_loss(spker_clsfir_output, expand_spker_targets)/spker_targets.shape[0]
             weighted_speaker_loss = self.spker_clsfir_weight*speaker_loss
-            
-            
-
+                    
         total_loss = (
             mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss + ctc_loss + bin_loss + weighted_speaker_loss
         )

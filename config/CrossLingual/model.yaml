@@ -3,14 +3,14 @@ external_speaker_dim: 512
 
 gradient_reversal:
   enable: True
-  spker_clsfir_loss_weight: 0.02
+  spker_clsfir_loss_weight: 0.2
   spker_clsfir_hidden: 256
 
 residual_encoder:
   enable: False
   residual_encoder_dim: 32
 
-spker_decoder_residual: True
+spker_decoder_residual: False
 
 duration_modeling:
   learn_alignment: True

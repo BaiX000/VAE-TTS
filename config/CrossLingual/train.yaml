@@ -4,11 +4,11 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/SpkerDecoderResidual-GradientReversal002-CrossLingual-Data-50-50-SpkID"
-  log_path: "./output/log/SpkerDecoderResidual-GradientReversal002-CrossLingual-Data-50-50-SpkID"
-  result_path: "./output/result/SpkerDecoderResidual-GradientReversal002-CrossLingual-Data-50-50-SpkID"
+  ckpt_path: "./output/ckpt/CL100-SV-GR02"
+  log_path: "./output/log/CL100-SV-GR02"
+  result_path: "./output/result/CL100-SV-GR02"
 optimizer:
-  batch_size: 4 
+  batch_size: 48 
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
@@ -18,12 +18,12 @@ optimizer:
   anneal_steps: [300000, 400000, 500000]
   anneal_rate: 0.3
 step:
-  total_step: 900000
+  total_step: 500000
   log_step: 100
   synth_step: 1000 #1000
   val_step: 1000 # 1000
   save_step: 50000
 duration:
-  binarization_start_steps: 6000
-  binarization_loss_enable_steps: 18000
-  binarization_loss_warmup_steps: 10000
+  binarization_start_steps: 3000 #6000
+  binarization_loss_enable_steps: 9000 #18000
+  binarization_loss_warmup_steps: 50000 #10000
