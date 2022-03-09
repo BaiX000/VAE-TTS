@@ -4,9 +4,9 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/Standard-CrossLingual-Data-50-50"
-  log_path: "./output/log/Standard-CrossLingual-Data-50-50"
-  result_path: "./output/result/Standard-CrossLingual-Data-50-50"
+  ckpt_path: "./output/ckpt/SpkerDecoderResidual-GradientReversal002-CrossLingual-Data-50-50-SpkID"
+  log_path: "./output/log/SpkerDecoderResidual-GradientReversal002-CrossLingual-Data-50-50-SpkID"
+  result_path: "./output/result/SpkerDecoderResidual-GradientReversal002-CrossLingual-Data-50-50-SpkID"
 optimizer:
   batch_size: 4 
   betas: [0.9, 0.98]

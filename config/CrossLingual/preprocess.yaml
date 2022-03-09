@@ -7,7 +7,7 @@ path:
   preprocessed_path: "./preprocessed_data/CrossLingual"
 
 preprocessing:
-  speaker_embedder: "DeepSpeaker" # support 'none', 'DeepSpeaker'
+  speaker_embedder: "none" # support 'none', 'DeepSpeaker'
   speaker_embedder_cuda: False # since it's too large to load in a single GPU
   skip_mel_len: 1300 # skip mel that is over this value.
   val_size: 512

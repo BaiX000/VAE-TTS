@@ -89,6 +89,8 @@ class CompTransTTS(nn.Module):
             )
         '''
         
+        self.spker_decoder_residual = model_config["spker_decoder_residual"]
+        
     def forward(
         self,
         speakers,
@@ -130,6 +132,7 @@ class CompTransTTS(nn.Module):
         # speaker_emb is not None if it is multispeakers. 
         # speaker_emb will be either nn.Linear(n_speaker, encoder_hidden) or nn.Linear(external_dim(512), encoder_hidden)
         if self.speaker_emb is not None:
+            print()
             if self.embedder_type == "none":
                 speaker_embeds = self.speaker_emb(speakers) # [B, H]
             else:
@@ -171,7 +174,11 @@ class CompTransTTS(nn.Module):
         )
 
         #residual_encoding = self.residual_encoder(mels)
-        
+        if self.spker_decoder_residual:
+            print("decoder! residual!")
+            output = output + speaker_embeds.unsqueeze(1).expand(
+                -1, output.shape[1], -1
+            )
 
         output, mel_masks = self.decoder(output, mel_masks)
         output = self.mel_linear(output)

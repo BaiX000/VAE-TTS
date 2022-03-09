@@ -10,7 +10,9 @@ preprocessing:
   speaker_embedder: "DeepSpeaker" # support 'none', 'DeepSpeaker'
   speaker_embedder_cuda: False # since it's too large to load in a single GPU
   # 35female, 15male
-  target_speakers: ["SSB0005", "SSB0009", "SSB0011", "SSB0012", "SSB0016", "SSB0018", "SSB0033", "SSB0038", "SSB0043", "SSB0057", "SSB0073", "SSB0080", "SSB0122", "SSB0139", "SSB0145", "SSB0193", "SSB0197", "SSB0200", "SSB0241", "SSB0246", "SSB0261", "SSB0273", "SSB0288", "SSB0299", "SSB1831", "SSB1365", "SSB1863", "SSB1831", "SSB0631", "SSB1328", "SSB0629", "SSB0863", "SSB1488", "SSB1624", "SSB0426", "SSB0427", "SSB0435", "SSB0502", "SSB0534", "SSB0539", "SSB0570", "SSB0601", "SSB0607", "SSB0632", "SSB0668"]
+  #target_speakers: ["SSB0005", "SSB0009", "SSB0011", "SSB0012", "SSB0016", "SSB0018", "SSB0033", "SSB0038", "SSB0043", "SSB0057", "SSB0073", "SSB0080", "SSB0122", "SSB0139", "SSB0145", "SSB0193", "SSB0197", "SSB0200", "SSB0241", "SSB0246", "SSB0261", "SSB0273", "SSB0288", "SSB0299", "SSB1831", "SSB1365", "SSB1863", "SSB1831", "SSB0631", "SSB1328", "SSB0629", "SSB0863", "SSB1488", "SSB1624", "SSB0426", "SSB0427", "SSB0435", "SSB0502", "SSB0534", "SSB0539", "SSB0570", "SSB0601", "SSB0607", "SSB0632", "SSB0668"]#
+  speaker_num_to_process: 100
+  skip_mel_len: 800 # skip mel that is over this value.
 
   val_size: 512
   text:

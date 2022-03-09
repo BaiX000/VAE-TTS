@@ -66,8 +66,14 @@ class Preprocessor:
         if self.multi_speaker and preprocess_config["preprocessing"]["speaker_embedder"] != "none":
             self.speaker_emb = PreDefinedEmbedder(preprocess_config)
             self.speaker_emb_dict = self._init_spker_embeds(self.in_sub_dirs)
+       
+        # skip mels that is over the value
         self.skip_mel_len = preprocess_config["preprocessing"]["skip_mel_len"] if "skip_mel_len" in preprocess_config["preprocessing"].keys() else 1500
 
+        self.speaker_num_to_process = None
+        if "speaker_num_to_process" in preprocess_config["preprocessing"].keys():
+            self.speaker_num_to_process = preprocess_config["preprocessing"]["speaker_num_to_process"]
+        
     def _init_spker_embeds(self, spkers):
         spker_embeds = dict()
         for spker in spkers:
@@ -137,7 +143,24 @@ class Preprocessor:
         skip_speakers = set()
         for embedding_name in os.listdir(embedding_dir):
             skip_speakers.add(embedding_name.split("-")[0])
+            
+        
+        # sort the speaker by the numbers of data 
+        spker_data_lens = {}
+        for speaker in self.in_sub_dirs:
+            n = 0
+            if os.path.isdir(os.path.join(self.in_dir, speaker)):
+                for wav_name in os.listdir(os.path.join(self.in_dir, speaker)):
+                    if ".wav" in wav_name:
+                        n = n+1
+            spker_data_lens[speaker] = n
+        spker_data_lens = dict(sorted(spker_data_lens.items(), key=lambda item: item[1], reverse=True))
+        if self.speaker_num_to_process is not None:
+            print("Only process {} speaker's data sort by data amount.".format(self.speaker_num_to_process))
+            self.in_sub_dirs = [spk for spk in spker_data_lens.keys()][:self.speaker_num_to_process]
 
+            
+            
         # to record process info, such as how many uttr are skip.
         process_info = {}
         for speaker in self.in_sub_dirs:
@@ -145,13 +168,12 @@ class Preprocessor:
                 process_info[speaker] = {}
                 process_info[speaker]["total_uttr"] = 0
                 process_info[speaker]["remain_uttr"] = 0      
-        print(f"Skip mels that length is larger than {self.skip_mel_len}.")
+       
+        print(f"Skip mels that length is larger than {self.skip_mel_len}.")    
         # Compute pitch, energy, duration, and mel-spectrogram
         speakers = {}      
         for i, speaker in enumerate(tqdm(self.in_sub_dirs)):
             save_speaker_emb = self.speaker_emb is not None and speaker not in skip_speakers
-            print(self.speaker_emb, skip_speakers)
-            print(speaker, save_speaker_emb)
             if os.path.isdir(os.path.join(self.in_dir, speaker)):
                 speakers[speaker] = i
         
@@ -222,6 +244,8 @@ class Preprocessor:
         # Save files
         with open(os.path.join(self.out_dir, "process_info.json"), "w") as f:
             f.write(json.dumps(process_info))
+            f.write( "Total time: {} hours".format(
+                n_frames * self.hop_length / self.sampling_rate / 3600))
         
         with open(os.path.join(self.out_dir, "speakers.json"), "w") as f:
             f.write(json.dumps(speakers))

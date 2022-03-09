@@ -7,9 +7,10 @@ gradient_reversal:
   spker_clsfir_hidden: 256
 
 residual_encoder:
-  enable: True
+  enable: False
   residual_encoder_dim: 32
 
+spker_decoder_residual: True
 
 duration_modeling:
   learn_alignment: True
