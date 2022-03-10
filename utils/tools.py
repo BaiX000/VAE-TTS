@@ -275,6 +275,9 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
     learn_alignment = model_config["duration_modeling"]["learn_alignment"]
     pitch_level_tag, energy_level_tag, *_ = get_variance_level(preprocess_config, model_config)
     basenames = targets[0]
+    
+    # not saving image
+    '''
     for i in range(len(predictions[0])):
         basename = basenames[i]
         src_len = predictions[8][i].item()
@@ -300,8 +303,9 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
             stats = json.load(f)
             stats = stats[f"pitch_{pitch_level_tag}"] + stats[f"energy_{energy_level_tag}"][:2] # Should follow the level at data loading time.
 
+        
         fig_save_dir = os.path.join(
-            path, str(args.restore_step), "{}_{}.png".format(basename, args.speaker_id)\
+            path, str(args.restore_step), "{}_{}_{}.png".format(basename, args.speaker_id, args.lang)\
                 if multi_speaker and args.mode == "single" else "{}.png".format(basename))
         fig = plot_mel(
             [
@@ -311,6 +315,7 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
             ["Synthetized Spectrogram"],
             save_dir=fig_save_dir,
         )
+    '''
 
     from .model import vocoder_infer
 
@@ -323,7 +328,7 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
     for wav, basename in zip(wav_predictions, basenames):
         wavfile.write(os.path.join(
-            path, str(args.restore_step), "{}_{}.wav".format(basename, args.speaker_id)\
+            path, str(args.restore_step), "{}_{}_{}.wav".format(args.speaker_id, args.lang, basename)\
                 if multi_speaker and args.mode == "single" else "{}.wav".format(basename)),
             sampling_rate, wav)
 
