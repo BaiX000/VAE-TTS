@@ -7,8 +7,7 @@ from torch.utils.data import Dataset, ConcatDataset
 
 from text import text_to_sequence
 from utils.tools import get_variance_level, pad_1D, pad_2D, pad_3D
-
-
+from tqdm import tqdm
 class ConcatDataset(ConcatDataset):
     def __init__(self, datasets, preprocess_config, model_config, train_config, sort=False, drop_last=False):
         super().__init__(datasets)
@@ -19,25 +18,27 @@ class ConcatDataset(ConcatDataset):
         self.load_spker_embed = model_config["multi_speaker"] \
             and preprocess_config["preprocessing"]["speaker_embedder"] != 'none'
         
-        # create a new speaker ids map for datasets
-        for i, d in enumerate(datasets):
-            if i == 0:
-                speaker_map = d.speaker_map
-            else:
-                speaker_map.update(d.speaker_map)
-        # reindex the map
+        # 1. create a new speaker ids map for datasets
+        assert len(datasets)==2, "number of dataset not 2"
+        speaker_map = dict(datasets[0].speaker_map)
+        speaker_map.update(datasets[1].speaker_map)
+        
+        # 2. reindex the map
         for i, key in enumerate(speaker_map.keys()):
             speaker_map[key] = i
         self.speaker_map = speaker_map
         
-        # write the new speaker map to "preprocessed_data/CrossLingual"
+        # 3. write the new speaker map to "preprocessed_data/CrossLingual"
         preprocessed_path = "preprocessed_data/CrossLingual"
         with open(os.path.join(preprocessed_path, "speakers.json"), "w") as f:
             f.write(json.dumps(speaker_map))
-
+        
+        
+      
     def reprocess(self, data, idxs):
         ids = [data[idx]["id"] for idx in idxs]
-        speakers = [data[idx]["speaker"] for idx in idxs]
+        # map speaker to common speaker id speace
+        speakers = [self.speaker_map[data[idx]["speaker"]] for idx in idxs]
         texts = [data[idx]["text"] for idx in idxs]
         raw_texts = [data[idx]["raw_text"] for idx in idxs]
         mels = [data[idx]["mel"] for idx in idxs]
@@ -47,7 +48,7 @@ class ConcatDataset(ConcatDataset):
         attn_priors = [data[idx]["attn_prior"] for idx in idxs] if self.learn_alignment else None
         spker_embeds = np.concatenate(np.array([data[idx]["spker_embed"] for idx in idxs]), axis=0) \
             if self.load_spker_embed else None
-        lids = [data[idx]["lid"] for idx in idxs]
+        lids = [data[idx]["lid"] for idx in idxs]        
 
         text_lens = np.array([text.shape[0] for text in texts])
         mel_lens = np.array([mel.shape[0] for mel in mels])
@@ -179,7 +180,9 @@ class Dataset(Dataset):
 
         sample = {
             "id": basename,
-            "speaker": speaker_id,
+            # return speaker instead of speaker id, due to multiple datasets
+            # may have overlapped id. 
+            "speaker": speaker,
             "text": phone,
             "raw_text": raw_text,
             "mel": mel,
@@ -190,7 +193,6 @@ class Dataset(Dataset):
             "spker_embed": spker_embed,
             "lid": lid,
         }
-
         return sample
 
     def process_meta(self, filename):
@@ -211,7 +213,7 @@ class Dataset(Dataset):
 
     def reprocess(self, data, idxs):
         ids = [data[idx]["id"] for idx in idxs]
-        speakers = [data[idx]["speaker"] for idx in idxs]
+        speakers = [self.speaker_map[data[idx]["speaker"]] for idx in idxs]
         texts = [data[idx]["text"] for idx in idxs]
         raw_texts = [data[idx]["raw_text"] for idx in idxs]
         mels = [data[idx]["mel"] for idx in idxs]
