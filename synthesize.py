@@ -236,7 +236,6 @@ if __name__ == "__main__":
                 "spker_embed",
                 "{}-spker_embed.npy".format(args.speaker_id),
             )) if load_spker_embed else None
-            model_config["vae_type"] = 'None'
         
         elif args.speaker_id_cross:
             speakers = np.array([0]) 
@@ -256,7 +255,6 @@ if __name__ == "__main__":
         
         text_lens = np.array([len(texts[0])])
         batchs = [(ids, raw_texts, speakers, texts, text_lens, max(text_lens), spker_embed, lid)]
-
     control_values = args.pitch_control, args.energy_control, args.duration_control
 
     synthesize(device, model, args, configs, vocoder, batchs, control_values)

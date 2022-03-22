@@ -132,7 +132,6 @@ class CompTransTTS(nn.Module):
         # speaker_emb is not None if it is multispeakers. 
         # speaker_emb will be either nn.Linear(n_speaker, encoder_hidden) or nn.Linear(external_dim(512), encoder_hidden)
         if self.speaker_emb is not None:
-            print()
             if self.embedder_type == "none":
                 speaker_embeds = self.speaker_emb(speakers) # [B, H]
             else:
