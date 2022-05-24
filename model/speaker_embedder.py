@@ -23,7 +23,8 @@ class PreDefinedEmbedder(nn.Module):
         embedder = None
         if self.embedder_type == "DeepSpeaker":
             embedder = embedding.build_model(
-                "./deepspeaker/pretrained_models/ResCNN_triplet_training_checkpoint_265.h5"
+                #"./deepspeaker/pretrained_models/ResCNN_triplet_training_checkpoint_265.h5"
+                "./deepspeaker/pretrained_models/ResCNN_checkpoint_86.h5"
             )
         else:
             raise NotImplementedError

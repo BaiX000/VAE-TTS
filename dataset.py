@@ -190,9 +190,10 @@ class Dataset(Dataset):
             "energy": energy,
             "duration": duration,
             "attn_prior": attn_prior,
-            "spker_embed": spker_embed,
+            "spker_embed": [spker_embed],
             "lid": lid,
         }
+        
         return sample
 
     def process_meta(self, filename):

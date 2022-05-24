@@ -62,14 +62,14 @@ def main(args):
     
     # load gender info. of AISHELL3 & LibriTTS
     gender_map = {}
-    with open('../Dataset/AISHELL-3/spk-info.txt') as f:
+    with open('./AISHELL3-spk-info.txt') as f:
         lines = f.readlines()
         lines = lines[3:]
         for line in lines:
             spker, age , gender, region = line.strip().split('\t')
             gender_map[spker] = 0 if gender == "female" else 1  
 
-    with open('../Dataset/LibriTTS/SPEAKERS.txt') as f:
+    with open('./LibriTTS-SPEAKERS.txt') as f:
         lines = f.readlines()
         lines = lines[12:]
         for line in lines:

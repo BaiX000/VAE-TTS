@@ -111,6 +111,7 @@ class CompTransTTS(nn.Module):
         d_control=1.0,
         step=None,
     ):
+
         src_masks = get_mask_from_lengths(src_lens, max_src_len)
         mel_masks = (
             get_mask_from_lengths(mel_lens, max_mel_len)

@@ -143,7 +143,7 @@ class Preprocessor:
         skip_speakers = set()
         for embedding_name in os.listdir(embedding_dir):
             skip_speakers.add(embedding_name.split("-")[0])
-            
+        print(self.out_dir, skip_speakers)
         
         # sort the speaker by the numbers of data 
         spker_data_lens = {}

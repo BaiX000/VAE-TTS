@@ -4,11 +4,11 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/CL100-SV-GR02"
-  log_path: "./output/log/CL100-SV-GR02"
-  result_path: "./output/result/CL100-SV-GR02"
+  ckpt_path: "./output/ckpt/lang0_xvector_AMS02"
+  log_path: "./output/log/lang0_xvector_AMS02"
+  result_path: "./output/result/lang0_xvector_AMS02"
 optimizer:
-  batch_size: 48 
+  batch_size: 64 
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
