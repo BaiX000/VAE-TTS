@@ -8,7 +8,7 @@ path:
   log_path: "./output/log/LibriTTS-VAE-Finetune"
   result_path: "./output/result/LibriTTS-VAE-Finetune"
 optimizer:
-  batch_size: 4 #16
+  batch_size: 16 #16
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0

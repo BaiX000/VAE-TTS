@@ -4,9 +4,9 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/lang0_xvector_AMS02"
-  log_path: "./output/log/lang0_xvector_AMS02"
-  result_path: "./output/result/lang0_xvector_AMS02"
+  ckpt_path: "./output/ckpt/wavLMSV-Bi"
+  log_path: "./output/log/wavLMSV-Bi"
+  result_path: "./output/result/wavLMSV-Bi"
 optimizer:
   batch_size: 64 
   betas: [0.9, 0.98]
@@ -18,12 +18,12 @@ optimizer:
   anneal_steps: [300000, 400000, 500000]
   anneal_rate: 0.3
 step:
-  total_step: 500000
+  total_step: 900000
   log_step: 100
-  synth_step: 1000 #1000
+  synth_step: 2000 #1000
   val_step: 1000 # 1000
   save_step: 50000
 duration:
-  binarization_start_steps: 4000 #6000
-  binarization_loss_enable_steps: 12000 #18000
-  binarization_loss_warmup_steps: 8000 #10000
+  binarization_start_steps: 6000 #6000
+  binarization_loss_enable_steps: 18000 #18000
+  binarization_loss_warmup_steps: 10000 #10000

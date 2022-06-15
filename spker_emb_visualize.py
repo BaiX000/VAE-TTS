@@ -11,8 +11,8 @@ class TSNE(nn.Module):
         self, 
         args,
         n_component=2,
-        perplexity=30, 
-        n_iter=1000,
+        perplexity=50, #30 
+        n_iter=5000,
         init="random",
         random_state=0, 
         verbose=0,
