@@ -172,7 +172,7 @@ class Dataset(Dataset):
             attn_prior = None
         spker_embed = np.load(os.path.join(
             self.preprocessed_path,
-            "spker_embed",
+            "spker_embed_wavlm", # !!!!!CHANGE!!!!
             "{}-spker_embed.npy".format(speaker),
         )) if self.load_spker_embed else None
         
@@ -190,7 +190,7 @@ class Dataset(Dataset):
             "energy": energy,
             "duration": duration,
             "attn_prior": attn_prior,
-            "spker_embed": spker_embed,
+            "spker_embed": [spker_embed],
             "lid": lid,
         }
         

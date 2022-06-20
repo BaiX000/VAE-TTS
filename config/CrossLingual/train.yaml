@@ -4,18 +4,18 @@ dist_config:
   dist_url: "tcp://localhost:54321"
   world_size: 1
 path:
-  ckpt_path: "./output/ckpt/wavLMSV-Bi"
-  log_path: "./output/log/wavLMSV-Bi"
-  result_path: "./output/result/wavLMSV-Bi"
+  ckpt_path: "./output/ckpt/wavLMSV-R-DR"
+  log_path: "./output/log/wavLMSV-R-DR"
+  result_path: "./output/result/wavLMSV-R-DR"
 optimizer:
-  batch_size: 64 
+  batch_size: 56 
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
   grad_clip_thresh: 1.0
   grad_acc_step: 1
   warm_up_step: 4000
-  anneal_steps: [300000, 400000, 500000]
+  anneal_steps: [100000, 140000, 170000]
   anneal_rate: 0.3
 step:
   total_step: 900000

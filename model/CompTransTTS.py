@@ -90,6 +90,8 @@ class CompTransTTS(nn.Module):
         '''
         
         self.spker_decoder_residual = model_config["spker_decoder_residual"]
+        self.lang_decoder_residual = model_config["lang_decoder_residual"]
+        
         
     def forward(
         self,
@@ -175,10 +177,16 @@ class CompTransTTS(nn.Module):
 
         #residual_encoding = self.residual_encoder(mels)
         if self.spker_decoder_residual:
-            print("decoder! residual!")
+            #print("decoder! residual!")
             output = output + speaker_embeds.unsqueeze(1).expand(
                 -1, output.shape[1], -1
             )
+            
+        if self.lang_decoder_residual:
+            output = output + language_embeds.unsqueeze(1).expand(
+                -1, output.shape[1], -1
+            )
+        
 
         output, mel_masks = self.decoder(output, mel_masks)
         output = self.mel_linear(output)
